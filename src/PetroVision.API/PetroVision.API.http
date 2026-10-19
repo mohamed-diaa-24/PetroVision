@@ -1,0 +1,6 @@
+@PetroVision.API_HostAddress = http://localhost:5187
+
+GET {{PetroVision.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

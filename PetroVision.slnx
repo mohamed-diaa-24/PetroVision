@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PetroVision.API/PetroVision.API.csproj" />
+    <Project Path="src/PetroVision.BLL/PetroVision.BLL.csproj" />
+    <Project Path="src/PetroVision.DAL/PetroVision.DAL.csproj" />
+  </Folder>
+</Solution>
