@@ -4,5 +4,6 @@ namespace PetroVision.BLL.Interfaces;
 
 public interface IDashboardService
 {
-    Task<DashboardDto> GetAsync();
+    Task<DashboardDto> GetOperationsAsync();
+    Task<OwnerDashboardDto> GetOwnerAsync();
 }

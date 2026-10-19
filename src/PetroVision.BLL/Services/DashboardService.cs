@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PetroVision.BLL.DTOs;
+using PetroVision.BLL.Exceptions;
 using PetroVision.BLL.Interfaces;
 using PetroVision.BLL.Mapping;
 using PetroVision.DAL.Context;
@@ -9,22 +10,39 @@ namespace PetroVision.BLL.Services;
 
 public class DashboardService : IDashboardService
 {
-    private const int LatestEventsCount = 10;
+    private const int LatestCount = 10;
 
     private readonly PetroVisionDbContext _db;
+    private readonly ICurrentUser _user;
 
-    public DashboardService(PetroVisionDbContext db) => _db = db;
-
-    public async Task<DashboardDto> GetAsync()
+    public DashboardService(PetroVisionDbContext db, ICurrentUser user)
     {
-        var activeAlerts = await _db.Alerts.CountAsync(a => a.Status == AlertStatus.New);
-        var openIncidents = await _db.Incidents.CountAsync(i => i.Status == IncidentStatus.Active);
+        _db = db;
+        _user = user;
+    }
+
+    // ---------- Manager / Agent ----------
+    public async Task<DashboardDto> GetOperationsAsync()
+    {
+        var departmentId = _user.DepartmentId
+            ?? throw new ForbiddenException("Your account is not assigned to a department yet.");
+
+        var department = await _db.Departments.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == departmentId)
+            ?? throw new NotFoundException("Department not found.");
 
         var cameras = await _db.Cameras
             .AsNoTracking()
             .Include(c => c.ModelConfigs)
+            .Where(c => c.DepartmentId == departmentId)
             .OrderBy(c => c.Name)
             .ToListAsync();
+
+        var activeAlerts = await _db.Alerts
+            .CountAsync(a => a.Status == AlertStatus.New && a.Camera.DepartmentId == departmentId);
+
+        var openIncidents = await _db.Incidents
+            .CountAsync(i => i.Status == IncidentStatus.Active && i.Camera.DepartmentId == departmentId);
 
         var runningModels = cameras
             .Where(c => c.Health == CameraHealth.Online)
@@ -35,15 +53,17 @@ public class DashboardService : IDashboardService
         var alerts = await _db.Alerts
             .AsNoTracking()
             .Include(a => a.Camera)
+            .Where(a => a.Camera.DepartmentId == departmentId)
             .OrderByDescending(a => a.CreatedAt)
-            .Take(LatestEventsCount)
+            .Take(LatestCount)
             .ToListAsync();
 
         var incidents = await _db.Incidents
             .AsNoTracking()
             .Include(i => i.Camera)
+            .Where(i => i.Camera.DepartmentId == departmentId)
             .OrderByDescending(i => i.CreatedAt)
-            .Take(LatestEventsCount)
+            .Take(LatestCount)
             .ToListAsync();
 
         var events = alerts
@@ -66,11 +86,13 @@ public class DashboardService : IDashboardService
                 Time = i.CreatedAt
             }))
             .OrderByDescending(e => e.Time)
-            .Take(LatestEventsCount)
+            .Take(LatestCount)
             .ToList();
 
         return new DashboardDto
         {
+            DepartmentName = department.Name,
+            NeedsSetup = cameras.Count == 0,
             ActiveAlerts = activeAlerts,
             OpenIncidents = openIncidents,
             CamerasOnline = cameras.Count(c => c.Health == CameraHealth.Online),
@@ -79,6 +101,51 @@ public class DashboardService : IDashboardService
             ModelTypes = runningModels.Select(m => m.Type).Distinct().OrderBy(t => t).ToList(),
             LatestEvents = events,
             Cameras = cameras.Select(c => c.ToDto()).ToList()
+        };
+    }
+
+    // ---------- Owner ----------
+    public async Task<OwnerDashboardDto> GetOwnerAsync()
+    {
+        var pendingManagers = await _db.Users
+            .AsNoTracking()
+            .Include(u => u.Department)
+            .Where(u => u.Role == UserRole.Manager && u.Status == UserStatus.Pending)
+            .OrderBy(u => u.CreatedAt)
+            .ToListAsync();
+
+        var recentIncidents = await _db.Incidents
+            .AsNoTracking()
+            .Include(i => i.Camera).ThenInclude(c => c.Department)
+            .OrderByDescending(i => i.CreatedAt)
+            .Take(LatestCount)
+            .ToListAsync();
+
+        return new OwnerDashboardDto
+        {
+            Departments = await _db.Departments.CountAsync(),
+            ManagersPending = pendingManagers.Count,
+            PendingRequests = pendingManagers.Count,
+            MajorIncidents = await _db.Incidents.CountAsync(),
+            IncidentsRequiringAttention = await _db.Incidents.CountAsync(i => i.Status == IncidentStatus.Active),
+            DevicesOnline = await _db.Cameras.CountAsync(c => c.Health == CameraHealth.Online),
+            DevicesTotal = await _db.Cameras.CountAsync(),
+            ManagerRequests = pendingManagers.Select(u => new ManagerRequestDto
+            {
+                UserId = u.Id,
+                Applicant = u.FullName,
+                Department = u.Department?.Name ?? "—",
+                Status = u.Status
+            }).ToList(),
+            RecentIncidents = recentIncidents.Select(i => new OwnerIncidentDto
+            {
+                Id = i.Id,
+                Type = i.Type,
+                Camera = i.Camera.Name,
+                Department = i.Camera.Department.Name,
+                Status = i.Status,
+                Time = i.CreatedAt
+            }).ToList()
         };
     }
 }
