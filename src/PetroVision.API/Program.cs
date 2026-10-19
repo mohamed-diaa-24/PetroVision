@@ -36,6 +36,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddBusinessLayer(builder.Configuration);
+builder.Services.AddCurrentUser();
 
 // ---------- JWT ----------
 var jwt = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
