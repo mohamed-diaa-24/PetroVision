@@ -62,8 +62,8 @@ public static class DbSeeder
 
         // ---------- Incidents ----------
         db.Incidents.AddRange(
-            new Incident { Camera = cam3, Type = DetectionType.Fall, Status = IncidentStatus.Active, Confidence = 0.91, CreatedAt = now },
-            new Incident { Camera = cam5, Type = DetectionType.Fire, Status = IncidentStatus.Closed, Confidence = 0.88, Note = "Area checked and safe", Handler = ahmed, CreatedAt = now.AddHours(-1), ClosedAt = now.AddMinutes(-40) });
+            new Incident { Camera = cam3, Type = IncidentType.Fall, Status = IncidentStatus.Active, Confidence = 0.91, CreatedAt = now },
+            new Incident { Camera = cam5, Type = IncidentType.Fire, Status = IncidentStatus.Closed, Confidence = 0.88, Note = "Area checked and safe", Handler = ahmed, CreatedAt = now.AddHours(-1), ClosedAt = now.AddMinutes(-40) });
 
         await db.SaveChangesAsync();
     }

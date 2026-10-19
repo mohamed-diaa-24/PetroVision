@@ -1,3 +1,3 @@
 namespace PetroVision.DAL.Enums;
 
-public enum IncidentStatus { Active = 1, Closed = 2 }
+public enum IncidentStatus { Active = 1, Closed = 2, Acknowledged = 3 }

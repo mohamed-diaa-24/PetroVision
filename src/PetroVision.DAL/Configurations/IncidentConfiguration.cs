@@ -12,6 +12,7 @@ public class IncidentConfiguration : IEntityTypeConfiguration<Incident>
         b.Property(x => x.Note).HasMaxLength(1000);
 
         b.HasIndex(x => x.Status);
+        b.HasIndex(x => x.SourceAlertId);
         b.HasIndex(x => x.CreatedAt);
 
         b.HasOne(x => x.Camera).WithMany()

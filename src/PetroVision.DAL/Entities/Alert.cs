@@ -15,6 +15,7 @@ public class Alert
     public int? HandledById { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? HandledAt { get; set; }
+    public DismissReason? DismissReason { get; set; }
 
     public Camera Camera { get; set; } = null!;
     public User? HandledBy { get; set; }
