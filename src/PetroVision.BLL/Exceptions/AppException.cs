@@ -24,3 +24,8 @@ public class InvalidCredentialsException : AppException
 {
     public InvalidCredentialsException(string message = "Invalid email or password.") : base(message) { }
 }
+
+public class BadRequestException : AppException
+{
+    public BadRequestException(string message) : base(message) { }
+}
