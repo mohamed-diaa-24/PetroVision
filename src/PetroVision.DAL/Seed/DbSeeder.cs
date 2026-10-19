@@ -14,15 +14,26 @@ public static class DbSeeder
         static string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password);
         var now = DateTime.UtcNow;
 
-        // ---------- Users ----------
-        var manager = new User { FullName = "Mohamed S.", EmployeeCode = "1001", Email = "manager@petrovision.com", PasswordHash = Hash("Manager@123"), Role = UserRole.Manager, Status = UserStatus.Active, LastActiveAt = now };
-        var owner   = new User { FullName = "Owner", EmployeeCode = "1002", Email = "owner@petrovision.com", PasswordHash = Hash("Owner@123"), Role = UserRole.Owner, Status = UserStatus.Active };
-        var ahmed   = new User { FullName = "Ahmed S.", EmployeeCode = "4710", Email = "ahmed@petrovision.com", PasswordHash = Hash("Agent@123"), Role = UserRole.Agent, Status = UserStatus.Active, LastActiveAt = now.AddMinutes(-5) };
-        var mona    = new User { FullName = "Mona K.", EmployeeCode = "4821", Email = "mona@petrovision.com", PasswordHash = Hash("Agent@123"), Role = UserRole.Agent, Status = UserStatus.Active, LastActiveAt = now.AddHours(-4) };
-        var omar    = new User { FullName = "Omar H.", EmployeeCode = "4833", Email = "omar@petrovision.com", PasswordHash = Hash("Agent@123"), Role = UserRole.Agent, Status = UserStatus.Expired };
-        var khaled  = new User { FullName = "Khaled R.", EmployeeCode = "4850", Email = "khaled@petrovision.com", PasswordHash = Hash("Agent@123"), Role = UserRole.Agent, Status = UserStatus.Pending };
+        // ---------- Departments ----------
+        var unit1 = new Department { Name = "Unit 1" };
+        var unit2 = new Department { Name = "Unit 2" };
+        var unit3 = new Department { Name = "Unit 3" };
+        var unit4 = new Department { Name = "Unit 4" };
+        db.Departments.AddRange(unit1, unit2, unit3, unit4);
 
-        db.Users.AddRange(manager, owner, ahmed, mona, omar, khaled);
+        // ---------- Users ----------
+        var manager = new User { FullName = "Mohamed S.", EmployeeCode = "1001", Email = "manager@petrovision.com", PasswordHash = Hash("Manager@123"), Role = UserRole.Manager, Status = UserStatus.Active, Department = unit1, LastActiveAt = now };
+        var owner   = new User { FullName = "Owner", EmployeeCode = "1002", Email = "owner@petrovision.com", PasswordHash = Hash("Owner@123"), Role = UserRole.Owner, Status = UserStatus.Active };
+        var ahmed   = new User { FullName = "Ahmed S.", EmployeeCode = "4710", Email = "ahmed@petrovision.com", PasswordHash = Hash("Agent@123"), Role = UserRole.Agent, Status = UserStatus.Active, Department = unit1, LastActiveAt = now.AddMinutes(-5) };
+        var mona    = new User { FullName = "Mona K.", EmployeeCode = "4821", Email = "mona@petrovision.com", PasswordHash = Hash("Agent@123"), Role = UserRole.Agent, Status = UserStatus.Active, Department = unit1, LastActiveAt = now.AddHours(-4) };
+        var omar    = new User { FullName = "Omar H.", EmployeeCode = "4833", Email = "omar@petrovision.com", PasswordHash = Hash("Agent@123"), Role = UserRole.Agent, Status = UserStatus.Expired, Department = unit1 };
+        var khaled  = new User { FullName = "Khaled R.", EmployeeCode = "4850", Email = "khaled@petrovision.com", PasswordHash = Hash("Agent@123"), Role = UserRole.Agent, Status = UserStatus.Pending, Department = unit1 };
+
+        // Manager candidates waiting for the Owner's approval
+        var candA = new User { FullName = "Manager Candidate A", EmployeeCode = "2001", Email = "manager.a@petrovision.com", PasswordHash = Hash("Manager@123"), Role = UserRole.Manager, Status = UserStatus.Pending, Department = unit2 };
+        var candB = new User { FullName = "Manager Candidate B", EmployeeCode = "2002", Email = "manager.b@petrovision.com", PasswordHash = Hash("Manager@123"), Role = UserRole.Manager, Status = UserStatus.Pending, Department = unit3 };
+
+        db.Users.AddRange(manager, owner, ahmed, mona, omar, khaled, candA, candB);
 
         db.AgentPermissions.AddRange(
             new AgentPermission { User = ahmed, Permission = PermissionType.ReassignIncidents },
@@ -30,13 +41,18 @@ public static class DbSeeder
             new AgentPermission { User = mona, Permission = PermissionType.ManageCameras });
 
         // ---------- Cameras ----------
-        var cam1 = NewCamera("Cam 1", "Gate A", CameraHealth.Online, now, DetectionType.PPE);
-        var cam2 = NewCamera("Cam 2", "Zone A", CameraHealth.Online, now, DetectionType.PPE, DetectionType.Fall);
-        var cam3 = NewCamera("Cam 3", "Zone B", CameraHealth.Online, now.AddMinutes(-1), DetectionType.PPE, DetectionType.Fall);
-        var cam4 = NewCamera("Cam 4", "Yard", CameraHealth.Offline, now.AddMinutes(-50), DetectionType.PPE);
-        var cam5 = NewCamera("Cam 5", "Zone C", CameraHealth.Online, now, DetectionType.Fire);
+        var cam1 = NewCamera("Cam 1", "Gate A", unit1, CameraHealth.Online, now, DetectionType.PPE);
+        var cam2 = NewCamera("Cam 2", "Zone A", unit1, CameraHealth.Online, now, DetectionType.PPE, DetectionType.Fall);
+        var cam3 = NewCamera("Cam 3", "Zone B", unit1, CameraHealth.Online, now.AddMinutes(-1), DetectionType.PPE, DetectionType.Fall);
+        var cam4 = NewCamera("Cam 4", "Yard", unit1, CameraHealth.Offline, now.AddMinutes(-50), DetectionType.PPE);
+        var cam5 = NewCamera("Cam 5", "Zone C", unit1, CameraHealth.Online, now, DetectionType.Fire);
 
-        db.Cameras.AddRange(cam1, cam2, cam3, cam4, cam5);
+        var u2cam1 = NewCamera("U2-Cam 1", "Gate", unit2, CameraHealth.Online, now, DetectionType.PPE);
+        var u2cam2 = NewCamera("U2-Cam 2", "Yard", unit2, CameraHealth.Offline, now.AddHours(-3), DetectionType.PPE);
+        var u3cam1 = NewCamera("U3-Cam 1", "Gate", unit3, CameraHealth.Online, now, DetectionType.PPE, DetectionType.Fire);
+        var u4cam1 = NewCamera("U4-Cam 1", "Tank Area", unit4, CameraHealth.Online, now, DetectionType.Fire);
+
+        db.Cameras.AddRange(cam1, cam2, cam3, cam4, cam5, u2cam1, u2cam2, u3cam1, u4cam1);
 
         // ---------- Alerts ----------
         db.Alerts.AddRange(
@@ -52,10 +68,11 @@ public static class DbSeeder
         await db.SaveChangesAsync();
     }
 
-    private static Camera NewCamera(string name, string location, CameraHealth health, DateTime lastSeen, params DetectionType[] models) => new()
+    private static Camera NewCamera(string name, string location, Department department, CameraHealth health, DateTime lastSeen, params DetectionType[] models) => new()
     {
         Name = name,
         Location = location,
+        Department = department,
         Health = health,
         LastSeenAt = lastSeen,
         StreamUrl = $"rtsp://demo/{name.Replace(" ", "").ToLower()}",
