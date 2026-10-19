@@ -109,6 +109,9 @@ namespace PetroVision.DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Health")
                         .HasColumnType("int");
 
@@ -134,6 +137,8 @@ namespace PetroVision.DAL.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -222,6 +227,27 @@ namespace PetroVision.DAL.Migrations
                     b.ToTable("CameraRequests");
                 });
 
+            modelBuilder.Entity("PetroVision.DAL.Entities.Department", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Departments");
+                });
+
             modelBuilder.Entity("PetroVision.DAL.Entities.Incident", b =>
                 {
                     b.Property<int>("Id")
@@ -283,6 +309,9 @@ namespace PetroVision.DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -312,6 +341,8 @@ namespace PetroVision.DAL.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -349,6 +380,17 @@ namespace PetroVision.DAL.Migrations
                     b.Navigation("Camera");
 
                     b.Navigation("HandledBy");
+                });
+
+            modelBuilder.Entity("PetroVision.DAL.Entities.Camera", b =>
+                {
+                    b.HasOne("PetroVision.DAL.Entities.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Department");
                 });
 
             modelBuilder.Entity("PetroVision.DAL.Entities.CameraModelConfig", b =>
@@ -396,6 +438,16 @@ namespace PetroVision.DAL.Migrations
                     b.Navigation("Camera");
 
                     b.Navigation("Handler");
+                });
+
+            modelBuilder.Entity("PetroVision.DAL.Entities.User", b =>
+                {
+                    b.HasOne("PetroVision.DAL.Entities.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Department");
                 });
 
             modelBuilder.Entity("PetroVision.DAL.Entities.Camera", b =>
