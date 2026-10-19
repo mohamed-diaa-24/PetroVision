@@ -1,3 +1,4 @@
+using PetroVision.API.Filters;
 using PetroVision.API.Extensions;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -37,6 +38,7 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddBusinessLayer(builder.Configuration);
 builder.Services.AddCurrentUser();
+builder.Services.AddScoped<ApiKeyAuthFilter>();
 
 // ---------- JWT ----------
 var jwt = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();

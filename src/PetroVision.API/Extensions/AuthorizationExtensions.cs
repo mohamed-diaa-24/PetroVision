@@ -7,6 +7,7 @@ public static class Policies
     public const string OwnerOnly = "OwnerOnly";
     public const string ManageCameras = "ManageCameras";
     public const string EditModelSettings = "EditModelSettings";
+    public const string ReassignIncidents = "ReassignIncidents";
 }
 
 public static class AuthorizationExtensions
@@ -20,7 +21,9 @@ public static class AuthorizationExtensions
             .AddPolicy(Policies.ManageCameras, p => p.RequireAssertion(ctx =>
                 ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "ManageCameras")))
             .AddPolicy(Policies.EditModelSettings, p => p.RequireAssertion(ctx =>
-                ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "EditModelSettings")));
+                ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "EditModelSettings")))
+            .AddPolicy(Policies.ReassignIncidents, p => p.RequireAssertion(ctx =>
+                ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "ReassignIncidents")));
 
         return services;
     }

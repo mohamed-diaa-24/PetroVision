@@ -26,6 +26,7 @@ public class ExceptionHandlingMiddleware
                 NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
                 ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
                 ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
+                BadRequestException => (StatusCodes.Status400BadRequest, "Bad request"),
                 InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
                 _ => (StatusCodes.Status500InternalServerError, "Server error")
             };
