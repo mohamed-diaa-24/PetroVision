@@ -21,6 +21,9 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICameraService, CameraService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IAlertService, AlertService>();
+        services.AddScoped<IIncidentService, IncidentService>();
+        services.AddScoped<IDetectionService, DetectionService>();
 
         return services;
     }
