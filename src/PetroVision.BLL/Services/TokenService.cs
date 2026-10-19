@@ -25,6 +25,9 @@ public class TokenService : ITokenService
             new("role", user.Role.ToString())
         };
 
+        if (user.DepartmentId.HasValue)
+            claims.Add(new Claim("department", user.DepartmentId.Value.ToString()));
+
         claims.AddRange(user.Permissions.Select(p => new Claim("permission", p.Permission.ToString())));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Key));

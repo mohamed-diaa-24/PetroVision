@@ -5,18 +5,33 @@ using PetroVision.BLL.Interfaces;
 using PetroVision.BLL.Mapping;
 using PetroVision.DAL.Context;
 using PetroVision.DAL.Entities;
+using PetroVision.DAL.Enums;
 
 namespace PetroVision.BLL.Services;
 
 public class CameraService : ICameraService
 {
     private readonly PetroVisionDbContext _db;
+    private readonly ICurrentUser _user;
 
-    public CameraService(PetroVisionDbContext db) => _db = db;
+    public CameraService(PetroVisionDbContext db, ICurrentUser user)
+    {
+        _db = db;
+        _user = user;
+    }
+
+    // Every query is limited to the current user's department.
+    private IQueryable<Camera> Scoped()
+    {
+        var departmentId = _user.DepartmentId
+            ?? throw new ForbiddenException("Your account is not assigned to a department yet.");
+
+        return _db.Cameras.Where(c => c.DepartmentId == departmentId);
+    }
 
     public async Task<List<CameraDto>> GetAllAsync()
     {
-        var cameras = await _db.Cameras
+        var cameras = await Scoped()
             .AsNoTracking()
             .Include(c => c.ModelConfigs)
             .OrderBy(c => c.Name)
@@ -27,7 +42,7 @@ public class CameraService : ICameraService
 
     public async Task<CameraDto> GetByIdAsync(int id)
     {
-        var camera = await _db.Cameras
+        var camera = await Scoped()
             .AsNoTracking()
             .Include(c => c.ModelConfigs)
             .FirstOrDefaultAsync(c => c.Id == id)
@@ -38,6 +53,9 @@ public class CameraService : ICameraService
 
     public async Task<CameraDto> CreateAsync(CreateCameraDto dto)
     {
+        var departmentId = _user.DepartmentId
+            ?? throw new ForbiddenException("Your account is not assigned to a department yet.");
+
         var name = dto.Name.Trim();
 
         if (await _db.Cameras.AnyAsync(c => c.Name == name))
@@ -48,18 +66,12 @@ public class CameraService : ICameraService
             Name = name,
             Location = dto.Location.Trim(),
             StreamUrl = dto.StreamUrl.Trim(),
-            Health = Camera_DefaultHealth,
+            DepartmentId = departmentId,
+            Health = CameraHealth.Offline,
             ModelConfigs = dto.Models
                 .GroupBy(m => m.Type)
                 .Select(g => g.Last())
-                .Select(m => new CameraModelConfig
-                {
-                    Type = m.Type,
-                    IsEnabled = m.IsEnabled,
-                    ConfidenceThreshold = m.ConfidenceThreshold,
-                    CooldownMinutes = m.CooldownMinutes,
-                    EvidenceRetentionDays = m.EvidenceRetentionDays
-                })
+                .Select(ToConfig)
                 .ToList()
         };
 
@@ -71,7 +83,7 @@ public class CameraService : ICameraService
 
     public async Task<CameraDto> UpdateModelsAsync(int id, List<CameraModelDto> models)
     {
-        var camera = await _db.Cameras
+        var camera = await Scoped()
             .Include(c => c.ModelConfigs)
             .FirstOrDefaultAsync(c => c.Id == id)
             ?? throw new NotFoundException("Camera not found.");
@@ -89,14 +101,7 @@ public class CameraService : ICameraService
 
             if (existing is null)
             {
-                camera.ModelConfigs.Add(new CameraModelConfig
-                {
-                    Type = m.Type,
-                    IsEnabled = m.IsEnabled,
-                    ConfidenceThreshold = m.ConfidenceThreshold,
-                    CooldownMinutes = m.CooldownMinutes,
-                    EvidenceRetentionDays = m.EvidenceRetentionDays
-                });
+                camera.ModelConfigs.Add(ToConfig(m));
             }
             else
             {
@@ -113,7 +118,7 @@ public class CameraService : ICameraService
 
     public async Task<CameraDto> SetMuteAsync(int id, bool isMuted)
     {
-        var camera = await _db.Cameras
+        var camera = await Scoped()
             .Include(c => c.ModelConfigs)
             .FirstOrDefaultAsync(c => c.Id == id)
             ?? throw new NotFoundException("Camera not found.");
@@ -126,12 +131,19 @@ public class CameraService : ICameraService
 
     public async Task DeleteAsync(int id)
     {
-        var camera = await _db.Cameras.FindAsync(id)
+        var camera = await Scoped().FirstOrDefaultAsync(c => c.Id == id)
             ?? throw new NotFoundException("Camera not found.");
 
         _db.Cameras.Remove(camera);
         await _db.SaveChangesAsync();
     }
 
-    private const PetroVision.DAL.Enums.CameraHealth Camera_DefaultHealth = PetroVision.DAL.Enums.CameraHealth.Offline;
+    private static CameraModelConfig ToConfig(CameraModelDto m) => new()
+    {
+        Type = m.Type,
+        IsEnabled = m.IsEnabled,
+        ConfidenceThreshold = m.ConfidenceThreshold,
+        CooldownMinutes = m.CooldownMinutes,
+        EvidenceRetentionDays = m.EvidenceRetentionDays
+    };
 }
