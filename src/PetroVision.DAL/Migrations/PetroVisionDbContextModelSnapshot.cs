@@ -61,6 +61,9 @@ namespace PetroVision.DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("DismissReason")
+                        .HasColumnType("int");
+
                     b.Property<string>("EvidenceUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -279,6 +282,9 @@ namespace PetroVision.DAL.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<int?>("SourceAlertId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -292,6 +298,8 @@ namespace PetroVision.DAL.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("HandlerId");
+
+                    b.HasIndex("SourceAlertId");
 
                     b.HasIndex("Status");
 
