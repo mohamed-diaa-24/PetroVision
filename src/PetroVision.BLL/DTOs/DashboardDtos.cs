@@ -39,7 +39,7 @@ public class ManagerRequestDto
 public class OwnerIncidentDto
 {
     public int Id { get; set; }
-    public DetectionType Type { get; set; }
+    public IncidentType Type { get; set; }
     public string Camera { get; set; } = string.Empty;
     public string Department { get; set; } = string.Empty;
     public IncidentStatus Status { get; set; }

@@ -42,7 +42,7 @@ public class DashboardService : IDashboardService
             .CountAsync(a => a.Status == AlertStatus.New && a.Camera.DepartmentId == departmentId);
 
         var openIncidents = await _db.Incidents
-            .CountAsync(i => i.Status == IncidentStatus.Active && i.Camera.DepartmentId == departmentId);
+            .CountAsync(i => i.Status != IncidentStatus.Closed && i.Camera.DepartmentId == departmentId);
 
         var runningModels = cameras
             .Where(c => c.Health == CameraHealth.Online)
