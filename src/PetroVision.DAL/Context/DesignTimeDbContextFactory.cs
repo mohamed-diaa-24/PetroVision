@@ -9,7 +9,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<PetroVisio
     public PetroVisionDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<PetroVisionDbContext>()
-            .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=PetroVisionDb;Trusted_Connection=True;TrustServerCertificate=True")
+            .UseSqlServer("Server=localhost,1433;Database=PetroVision;User Id=sa;Password=P@ssword12345!;TrustServerCertificate=True;")
             .Options;
 
         return new PetroVisionDbContext(options);
