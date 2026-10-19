@@ -15,5 +15,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         b.HasIndex(x => x.Email).IsUnique();
         b.HasIndex(x => x.EmployeeCode).IsUnique();
+
+        b.HasOne(x => x.Department).WithMany()
+         .HasForeignKey(x => x.DepartmentId)
+         .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -8,6 +8,7 @@ public class PetroVisionDbContext : DbContext
 {
     public PetroVisionDbContext(DbContextOptions<PetroVisionDbContext> options) : base(options) { }
 
+    public DbSet<Department> Departments => Set<Department>();
     public DbSet<User> Users => Set<User>();
     public DbSet<AgentPermission> AgentPermissions => Set<AgentPermission>();
     public DbSet<Camera> Cameras => Set<Camera>();

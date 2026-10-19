@@ -13,6 +13,8 @@ public class User
     public UserStatus Status { get; set; } = UserStatus.Pending;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastActiveAt { get; set; }
+    public int? DepartmentId { get; set; }
+    public Department? Department { get; set; }
 
     public ICollection<AgentPermission> Permissions { get; set; } = new List<AgentPermission>();
 }

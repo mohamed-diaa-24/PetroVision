@@ -12,6 +12,8 @@ public class Camera
     public bool IsMuted { get; set; }
     public DateTime? LastSeenAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int DepartmentId { get; set; }
+    public Department Department { get; set; } = null!;
 
     public ICollection<CameraModelConfig> ModelConfigs { get; set; } = new List<CameraModelConfig>();
 }

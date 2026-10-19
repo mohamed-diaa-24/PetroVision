@@ -13,5 +13,9 @@ public class CameraConfiguration : IEntityTypeConfiguration<Camera>
         b.Property(x => x.StreamUrl).HasMaxLength(500);
 
         b.HasIndex(x => x.Name).IsUnique();
+
+        b.HasOne(x => x.Department).WithMany()
+         .HasForeignKey(x => x.DepartmentId)
+         .OnDelete(DeleteBehavior.Restrict);
     }
 }
