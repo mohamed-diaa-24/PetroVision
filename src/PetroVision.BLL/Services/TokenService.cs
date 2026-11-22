@@ -22,7 +22,8 @@ public class TokenService : ITokenService
             new("sub", user.Id.ToString()),
             new("name", user.FullName),
             new("email", user.Email),
-            new("role", user.Role.ToString())
+            new("role", user.Role.ToString()),
+            new("stamp", user.SecurityStamp)
         };
 
         if (user.DepartmentId.HasValue)

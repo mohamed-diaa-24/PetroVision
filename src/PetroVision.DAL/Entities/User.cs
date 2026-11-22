@@ -13,6 +13,10 @@ public class User
     public UserStatus Status { get; set; } = UserStatus.Pending;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastActiveAt { get; set; }
+
+    // Changes whenever access must be re-checked (permissions, status, password).
+    // Tokens carry the stamp; a token with an old stamp is rejected.
+    public string SecurityStamp { get; set; } = Guid.NewGuid().ToString("N");
     public int? DepartmentId { get; set; }
     public Department? Department { get; set; }
 

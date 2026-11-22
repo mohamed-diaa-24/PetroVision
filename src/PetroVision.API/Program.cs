@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PetroVision.API.Middleware;
 using PetroVision.BLL;
+using PetroVision.BLL.Interfaces;
 using PetroVision.BLL.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -62,6 +63,21 @@ builder.Services
             ClockSkew = TimeSpan.FromMinutes(1),
             NameClaimType = "name",
             RoleClaimType = "role"
+        };
+
+        // A valid signature is not enough: the account must still be active and the
+        // token's security stamp must match (it changes on permission/status/password changes).
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async ctx =>
+            {
+                var validator = ctx.HttpContext.RequestServices.GetRequiredService<ISessionValidator>();
+                var sub = ctx.Principal?.FindFirst("sub")?.Value;
+                var stamp = ctx.Principal?.FindFirst("stamp")?.Value;
+
+                if (!int.TryParse(sub, out var userId) || !await validator.ValidateAsync(userId, stamp))
+                    ctx.Fail("Session is no longer valid. Please log in again.");
+            }
         };
     });
 
