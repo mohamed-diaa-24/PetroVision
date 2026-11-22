@@ -13,11 +13,13 @@ public class AlertService : IAlertService
 {
     private readonly PetroVisionDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IAuditLogger _audit;
 
-    public AlertService(PetroVisionDbContext db, ICurrentUser user)
+    public AlertService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit)
     {
         _db = db;
         _user = user;
+        _audit = audit;
     }
 
     private IQueryable<Alert> Scoped()
@@ -63,6 +65,7 @@ public class AlertService : IAlertService
         alert.HandledById = _user.UserId;
         alert.HandledAt = DateTime.UtcNow;
 
+        _audit.Add(AuditAction.AlertAcknowledged, nameof(Alert), alert.Id, $"Alert #{alert.Id}");
         await _db.SaveChangesAsync();
         return await GetByIdAsync(id);
     }
@@ -79,6 +82,7 @@ public class AlertService : IAlertService
         alert.HandledById = _user.UserId;
         alert.HandledAt = DateTime.UtcNow;
 
+        _audit.Add(AuditAction.AlertDismissed, nameof(Alert), alert.Id, $"Alert #{alert.Id}", $"Reason: {reason}");
         await _db.SaveChangesAsync();
         return await GetByIdAsync(id);
     }
@@ -117,6 +121,9 @@ public class AlertService : IAlertService
         }
 
         _db.Incidents.Add(incident);
+        await _db.SaveChangesAsync();
+
+        _audit.Add(AuditAction.AlertEscalated, nameof(Alert), alert.Id, $"Alert #{alert.Id}", $"Escalated to incident #{incident.Id}");
         await _db.SaveChangesAsync();
 
         var created = await _db.Incidents.AsNoTracking().WithDetails().FirstAsync(i => i.Id == incident.Id);

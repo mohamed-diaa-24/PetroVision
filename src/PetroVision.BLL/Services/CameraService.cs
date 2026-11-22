@@ -13,11 +13,13 @@ public class CameraService : ICameraService
 {
     private readonly PetroVisionDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IAuditLogger _audit;
 
-    public CameraService(PetroVisionDbContext db, ICurrentUser user)
+    public CameraService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit)
     {
         _db = db;
         _user = user;
+        _audit = audit;
     }
 
     // Every query is limited to the current user's department and hides removed cameras.
@@ -78,6 +80,9 @@ public class CameraService : ICameraService
         _db.Cameras.Add(camera);
         await _db.SaveChangesAsync();
 
+        _audit.Add(AuditAction.CameraCreated, nameof(Camera), camera.Id, camera.Name, camera.Location);
+        await _db.SaveChangesAsync();
+
         return camera.ToDto();
     }
 
@@ -112,6 +117,9 @@ public class CameraService : ICameraService
             }
         }
 
+        _audit.Add(AuditAction.CameraModelsUpdated, nameof(Camera), camera.Id, camera.Name,
+            incoming.Count == 0 ? "No models" : string.Join(", ", incoming.Select(m =>
+                $"{m.Type} {(m.IsEnabled ? "on" : "off")} ≥{m.ConfidenceThreshold:0.00}")));
         await _db.SaveChangesAsync();
         return camera.ToDto();
     }
@@ -124,6 +132,7 @@ public class CameraService : ICameraService
             ?? throw new NotFoundException("Camera not found.");
 
         camera.IsMuted = isMuted;
+        _audit.Add(isMuted ? AuditAction.CameraMuted : AuditAction.CameraUnmuted, nameof(Camera), camera.Id, camera.Name);
         await _db.SaveChangesAsync();
 
         return camera.ToDto();
@@ -138,6 +147,7 @@ public class CameraService : ICameraService
         camera.IsDeleted = true;
         camera.DeletedAt = DateTime.UtcNow;
         camera.Health = CameraHealth.Offline;
+        _audit.Add(AuditAction.CameraDeleted, nameof(Camera), camera.Id, camera.Name);
         await _db.SaveChangesAsync();
     }
 

@@ -13,11 +13,13 @@ public class IncidentService : IIncidentService
 {
     private readonly PetroVisionDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IAuditLogger _audit;
 
-    public IncidentService(PetroVisionDbContext db, ICurrentUser user)
+    public IncidentService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit)
     {
         _db = db;
         _user = user;
+        _audit = audit;
     }
 
     private int DepartmentId => _user.DepartmentId
@@ -89,6 +91,10 @@ public class IncidentService : IIncidentService
         _db.Incidents.Add(incident);
         await _db.SaveChangesAsync();
 
+        _audit.Add(AuditAction.IncidentCreated, nameof(Incident), incident.Id, $"Incident #{incident.Id}",
+            $"{incident.Type} · {camera.Name}");
+        await _db.SaveChangesAsync();
+
         return await GetByIdAsync(incident.Id);
     }
 
@@ -102,6 +108,7 @@ public class IncidentService : IIncidentService
         incident.Status = IncidentStatus.Acknowledged;
         incident.HandlerId = _user.UserId;
 
+        _audit.Add(AuditAction.IncidentAcknowledged, nameof(Incident), incident.Id, $"Incident #{incident.Id}");
         await _db.SaveChangesAsync();
         return await GetByIdAsync(id);
     }
@@ -121,6 +128,7 @@ public class IncidentService : IIncidentService
         incident.ClosedAt = DateTime.UtcNow;
         incident.HandlerId ??= _user.UserId;
 
+        _audit.Add(AuditAction.IncidentClosed, nameof(Incident), incident.Id, $"Incident #{incident.Id}", incident.Note);
         await _db.SaveChangesAsync();
         return await GetByIdAsync(id);
     }
@@ -133,17 +141,17 @@ public class IncidentService : IIncidentService
         if (incident.Status == IncidentStatus.Closed)
             throw new ConflictException("Closed incidents cannot be reassigned.");
 
-        var assigneeIsValid = await _db.Users.AnyAsync(u => u.Id == assigneeId
+        var assignee = await _db.Users.FirstOrDefaultAsync(u => u.Id == assigneeId
             && u.DepartmentId == departmentId
             && u.Status == UserStatus.Active
-            && (u.Role == UserRole.Manager || u.Role == UserRole.Agent));
+            && (u.Role == UserRole.Manager || u.Role == UserRole.Agent))
+            ?? throw new BadRequestException("Assignee must be an active member of your department.");
 
-        if (!assigneeIsValid)
-            throw new BadRequestException("Assignee must be an active member of your department.");
-
-        incident.HandlerId = assigneeId;
+        incident.HandlerId = assignee.Id;
         incident.Status = IncidentStatus.Acknowledged;
 
+        _audit.Add(AuditAction.IncidentReassigned, nameof(Incident), incident.Id, $"Incident #{incident.Id}",
+            $"Assigned to {assignee.FullName}");
         await _db.SaveChangesAsync();
         return await GetByIdAsync(id);
     }

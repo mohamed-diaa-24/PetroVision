@@ -55,18 +55,41 @@ public static class DbSeeder
         db.Cameras.AddRange(cam1, cam2, cam3, cam4, cam5, u2cam1, u2cam2, u3cam1, u4cam1);
 
         // ---------- Alerts ----------
+        var ackAlert = new Alert { Camera = cam1, Type = DetectionType.PPE, Level = AlertLevel.Low, Status = AlertStatus.Acknowledged, Reason = "PPE check", Confidence = 0.65, CreatedAt = now.AddMinutes(-18), HandledBy = ahmed, HandledAt = now.AddMinutes(-15) };
+        var dismissedAlert = new Alert { Camera = cam1, Type = DetectionType.PPE, Level = AlertLevel.Low, Status = AlertStatus.Dismissed, DismissReason = DismissReason.WrongDetection, Reason = "Wrong detection", Confidence = 0.61, CreatedAt = now.AddHours(-2), HandledBy = manager, HandledAt = now.AddHours(-2) };
         db.Alerts.AddRange(
             new Alert { Camera = cam2, Type = DetectionType.PPE, Level = AlertLevel.Medium, Status = AlertStatus.New, Reason = "Missing safety helmet", Confidence = 0.81, CreatedAt = now.AddMinutes(-3) },
-            new Alert { Camera = cam1, Type = DetectionType.PPE, Level = AlertLevel.Low, Status = AlertStatus.Acknowledged, Reason = "PPE check", Confidence = 0.65, CreatedAt = now.AddMinutes(-18), HandledBy = ahmed, HandledAt = now.AddMinutes(-15) },
-            new Alert { Camera = cam1, Type = DetectionType.PPE, Level = AlertLevel.Low, Status = AlertStatus.Dismissed, Reason = "Wrong detection", Confidence = 0.61, CreatedAt = now.AddHours(-2), HandledBy = manager, HandledAt = now.AddHours(-2) });
+            ackAlert,
+            dismissedAlert);
 
         // ---------- Incidents ----------
+        var closedIncident = new Incident { Camera = cam5, Type = IncidentType.Fire, Status = IncidentStatus.Closed, Confidence = 0.88, Note = "Area checked and safe", Handler = ahmed, CreatedAt = now.AddHours(-1), ClosedAt = now.AddMinutes(-40) };
         db.Incidents.AddRange(
             new Incident { Camera = cam3, Type = IncidentType.Fall, Status = IncidentStatus.Active, Confidence = 0.91, CreatedAt = now },
-            new Incident { Camera = cam5, Type = IncidentType.Fire, Status = IncidentStatus.Closed, Confidence = 0.88, Note = "Area checked and safe", Handler = ahmed, CreatedAt = now.AddHours(-1), ClosedAt = now.AddMinutes(-40) });
+            closedIncident);
+
+        await db.SaveChangesAsync();
+
+        // ---------- Audit log (needs the ids above) ----------
+        db.AuditLogs.AddRange(
+            Log(AuditAction.AlertDismissed, "Alert", dismissedAlert.Id, $"Alert #{dismissedAlert.Id}", manager, now.AddHours(-2), "Reason: WrongDetection"),
+            Log(AuditAction.IncidentClosed, "Incident", closedIncident.Id, $"Incident #{closedIncident.Id}", ahmed, now.AddMinutes(-40), closedIncident.Note),
+            Log(AuditAction.AlertAcknowledged, "Alert", ackAlert.Id, $"Alert #{ackAlert.Id}", ahmed, now.AddMinutes(-15)));
 
         await db.SaveChangesAsync();
     }
+
+    private static AuditLog Log(AuditAction action, string type, int id, string item, User user, DateTime at, string? details = null) => new()
+    {
+        Action = action,
+        EntityType = type,
+        EntityId = id,
+        Item = item,
+        Details = details,
+        UserId = user.Id,
+        DepartmentId = user.DepartmentId,
+        CreatedAt = at
+    };
 
     private static Camera NewCamera(string name, string location, Department department, CameraHealth health, DateTime lastSeen, params DetectionType[] models) => new()
     {
