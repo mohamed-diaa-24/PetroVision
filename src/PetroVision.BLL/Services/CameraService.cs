@@ -58,8 +58,8 @@ public class CameraService : ICameraService
 
         var name = dto.Name.Trim();
 
-        if (await _db.Cameras.AnyAsync(c => c.Name == name))
-            throw new ConflictException("A camera with this name already exists.");
+        if (await _db.Cameras.AnyAsync(c => c.DepartmentId == departmentId && !c.IsDeleted && c.Name == name))
+            throw new ConflictException("A camera with this name already exists in your department.");
 
         var camera = new Camera
         {

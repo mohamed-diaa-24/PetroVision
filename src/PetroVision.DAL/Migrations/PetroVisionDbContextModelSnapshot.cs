@@ -147,10 +147,9 @@ namespace PetroVision.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DepartmentId");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
+                    b.HasIndex("DepartmentId", "Name")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Cameras");
                 });
