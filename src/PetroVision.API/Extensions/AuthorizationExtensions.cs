@@ -9,6 +9,7 @@ public static class Policies
     public const string EditModelSettings = "EditModelSettings";
     public const string ReassignIncidents = "ReassignIncidents";
     public const string ViewTeamLogs = "ViewTeamLogs";
+    public const string Reviewers = "Reviewers";                 // Manager or Owner
 }
 
 public static class AuthorizationExtensions
@@ -19,6 +20,7 @@ public static class AuthorizationExtensions
             .AddPolicy(Policies.Staff, p => p.RequireRole("Manager", "Agent"))
             .AddPolicy(Policies.ManagerOnly, p => p.RequireRole("Manager"))
             .AddPolicy(Policies.OwnerOnly, p => p.RequireRole("Owner"))
+            .AddPolicy(Policies.Reviewers, p => p.RequireRole("Manager", "Owner"))
             .AddPolicy(Policies.ManageCameras, p => p.RequireAssertion(ctx =>
                 ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "ManageCameras")))
             .AddPolicy(Policies.EditModelSettings, p => p.RequireAssertion(ctx =>

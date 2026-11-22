@@ -11,6 +11,7 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public UserStatus Status { get; set; } = UserStatus.Pending;
+    public string? StatusReason { get; set; }   // e.g. why a sign-up request was rejected
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastActiveAt { get; set; }
 

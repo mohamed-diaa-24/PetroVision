@@ -38,7 +38,9 @@ public class AuthService : IAuthService
                     ? "Your account is awaiting the owner's approval."
                     : "Your account is awaiting your manager's approval.");
             case UserStatus.Rejected:
-                throw new ForbiddenException("Your sign-up request was rejected.");
+                throw new ForbiddenException(string.IsNullOrEmpty(user.StatusReason)
+                    ? "Your sign-up request was rejected."
+                    : $"Your sign-up request was rejected: {user.StatusReason}");
             case UserStatus.Expired:
                 throw new ForbiddenException("Your account has expired. Please contact your manager.");
         }
