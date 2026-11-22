@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<ICameraRequestService, CameraRequestService>();
         services.AddScoped<ISignupReviewService, SignupReviewService>();
         services.AddScoped<IAgentService, AgentService>();
+        services.AddScoped<IAnalyticsService, AnalyticsService>();
 
         return services;
     }
