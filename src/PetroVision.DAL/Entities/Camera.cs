@@ -10,6 +10,10 @@ public class Camera
     public string StreamUrl { get; set; } = string.Empty;
     public CameraHealth Health { get; set; } = CameraHealth.Offline;
     public bool IsMuted { get; set; }
+
+    // Soft delete: a removed camera keeps its alerts/incidents history.
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
     public DateTime? LastSeenAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int DepartmentId { get; set; }

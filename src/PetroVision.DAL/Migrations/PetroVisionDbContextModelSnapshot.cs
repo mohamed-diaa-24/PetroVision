@@ -112,11 +112,17 @@ namespace PetroVision.DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
                     b.Property<int>("Health")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsMuted")
                         .HasColumnType("bit");
@@ -377,7 +383,7 @@ namespace PetroVision.DAL.Migrations
                     b.HasOne("PetroVision.DAL.Entities.Camera", "Camera")
                         .WithMany()
                         .HasForeignKey("CameraId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("PetroVision.DAL.Entities.User", "HandledBy")
@@ -435,7 +441,7 @@ namespace PetroVision.DAL.Migrations
                     b.HasOne("PetroVision.DAL.Entities.Camera", "Camera")
                         .WithMany()
                         .HasForeignKey("CameraId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("PetroVision.DAL.Entities.User", "Handler")

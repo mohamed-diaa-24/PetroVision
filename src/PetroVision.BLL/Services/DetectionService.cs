@@ -21,7 +21,7 @@ public class DetectionService : IDetectionService
     {
         var camera = await _db.Cameras
             .Include(c => c.ModelConfigs)
-            .FirstOrDefaultAsync(c => c.Id == dto.CameraId)
+            .FirstOrDefaultAsync(c => c.Id == dto.CameraId && !c.IsDeleted)
             ?? throw new NotFoundException("Camera not found.");
 
         var now = DateTime.UtcNow;
@@ -87,7 +87,7 @@ public class DetectionService : IDetectionService
 
     public async Task HeartbeatAsync(HeartbeatDto dto)
     {
-        var camera = await _db.Cameras.FindAsync(dto.CameraId)
+        var camera = await _db.Cameras.FirstOrDefaultAsync(c => c.Id == dto.CameraId && !c.IsDeleted)
             ?? throw new NotFoundException("Camera not found.");
 
         camera.Health = dto.IsOnline ? CameraHealth.Online : CameraHealth.Offline;

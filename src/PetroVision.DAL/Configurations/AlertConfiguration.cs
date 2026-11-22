@@ -16,7 +16,7 @@ public class AlertConfiguration : IEntityTypeConfiguration<Alert>
 
         b.HasOne(x => x.Camera).WithMany()
          .HasForeignKey(x => x.CameraId)
-         .OnDelete(DeleteBehavior.Cascade);
+         .OnDelete(DeleteBehavior.Restrict); // cameras are soft-deleted; history must never cascade away
 
         b.HasOne(x => x.HandledBy).WithMany()
          .HasForeignKey(x => x.HandledById)

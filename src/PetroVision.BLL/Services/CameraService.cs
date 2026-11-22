@@ -20,13 +20,13 @@ public class CameraService : ICameraService
         _user = user;
     }
 
-    // Every query is limited to the current user's department.
+    // Every query is limited to the current user's department and hides removed cameras.
     private IQueryable<Camera> Scoped()
     {
         var departmentId = _user.DepartmentId
             ?? throw new ForbiddenException("Your account is not assigned to a department yet.");
 
-        return _db.Cameras.Where(c => c.DepartmentId == departmentId);
+        return _db.Cameras.Where(c => c.DepartmentId == departmentId && !c.IsDeleted);
     }
 
     public async Task<List<CameraDto>> GetAllAsync()
@@ -134,7 +134,10 @@ public class CameraService : ICameraService
         var camera = await Scoped().FirstOrDefaultAsync(c => c.Id == id)
             ?? throw new NotFoundException("Camera not found.");
 
-        _db.Cameras.Remove(camera);
+        // Soft delete: alerts and incidents keep pointing at this camera for the audit trail.
+        camera.IsDeleted = true;
+        camera.DeletedAt = DateTime.UtcNow;
+        camera.Health = CameraHealth.Offline;
         await _db.SaveChangesAsync();
     }
 

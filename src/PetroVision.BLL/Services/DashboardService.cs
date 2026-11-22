@@ -34,7 +34,7 @@ public class DashboardService : IDashboardService
         var cameras = await _db.Cameras
             .AsNoTracking()
             .Include(c => c.ModelConfigs)
-            .Where(c => c.DepartmentId == departmentId)
+            .Where(c => c.DepartmentId == departmentId && !c.IsDeleted)
             .OrderBy(c => c.Name)
             .ToListAsync();
 
@@ -128,8 +128,8 @@ public class DashboardService : IDashboardService
             PendingRequests = pendingManagers.Count,
             MajorIncidents = await _db.Incidents.CountAsync(),
             IncidentsRequiringAttention = await _db.Incidents.CountAsync(i => i.Status == IncidentStatus.Active),
-            DevicesOnline = await _db.Cameras.CountAsync(c => c.Health == CameraHealth.Online),
-            DevicesTotal = await _db.Cameras.CountAsync(),
+            DevicesOnline = await _db.Cameras.CountAsync(c => !c.IsDeleted && c.Health == CameraHealth.Online),
+            DevicesTotal = await _db.Cameras.CountAsync(c => !c.IsDeleted),
             ManagerRequests = pendingManagers.Select(u => new ManagerRequestDto
             {
                 UserId = u.Id,

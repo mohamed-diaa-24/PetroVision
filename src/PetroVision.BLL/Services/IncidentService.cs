@@ -75,7 +75,7 @@ public class IncidentService : IIncidentService
         var departmentId = DepartmentId;
 
         var camera = await _db.Cameras
-            .FirstOrDefaultAsync(c => c.Id == dto.CameraId && c.DepartmentId == departmentId)
+            .FirstOrDefaultAsync(c => c.Id == dto.CameraId && c.DepartmentId == departmentId && !c.IsDeleted)
             ?? throw new NotFoundException("Camera not found.");
 
         var incident = new Incident
