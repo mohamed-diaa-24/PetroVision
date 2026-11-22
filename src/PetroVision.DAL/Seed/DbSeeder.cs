@@ -68,6 +68,20 @@ public static class DbSeeder
             new Incident { Camera = cam3, Type = IncidentType.Fall, Status = IncidentStatus.Active, Confidence = 0.91, CreatedAt = now },
             closedIncident);
 
+        // ---------- Camera requests ----------
+        db.CameraRequests.Add(new CameraRequest
+        {
+            Type = CameraRequestType.Add,
+            Department = unit1,
+            Name = "Cam 6",
+            Location = "Zone C",
+            StreamUrl = "rtsp://demo/cam6",
+            Models = nameof(DetectionType.PPE),
+            Reason = "Blind spot near the loading bay",
+            RequestedBy = mona,
+            CreatedAt = now.AddMinutes(-80)
+        });
+
         await db.SaveChangesAsync();
 
         // ---------- Audit log (needs the ids above) ----------

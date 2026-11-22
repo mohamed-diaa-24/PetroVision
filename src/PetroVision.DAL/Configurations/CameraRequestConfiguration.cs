@@ -11,6 +11,17 @@ public class CameraRequestConfiguration : IEntityTypeConfiguration<CameraRequest
         b.Property(x => x.Name).IsRequired().HasMaxLength(50);
         b.Property(x => x.Location).IsRequired().HasMaxLength(100);
         b.Property(x => x.StreamUrl).HasMaxLength(500);
+        b.Property(x => x.Models).HasMaxLength(50);
+        b.Property(x => x.Reason).HasMaxLength(500);
+        b.Property(x => x.ReviewNote).HasMaxLength(500);
+
+        b.HasOne(x => x.Camera).WithMany()
+         .HasForeignKey(x => x.CameraId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Department).WithMany()
+         .HasForeignKey(x => x.DepartmentId)
+         .OnDelete(DeleteBehavior.Restrict);
 
         b.HasOne(x => x.RequestedBy).WithMany()
          .HasForeignKey(x => x.RequestedById)

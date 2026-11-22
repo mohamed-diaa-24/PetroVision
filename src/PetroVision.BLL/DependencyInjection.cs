@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IActivityService, ActivityService>();
         services.AddSingleton<IStreamProbe, StreamProbe>();
+        services.AddScoped<ICameraRequestService, CameraRequestService>();
 
         return services;
     }
