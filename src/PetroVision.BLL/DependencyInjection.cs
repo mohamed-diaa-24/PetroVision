@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddSingleton<IStreamProbe, StreamProbe>();
         services.AddScoped<ICameraRequestService, CameraRequestService>();
         services.AddScoped<ISignupReviewService, SignupReviewService>();
+        services.AddScoped<IAgentService, AgentService>();
 
         return services;
     }

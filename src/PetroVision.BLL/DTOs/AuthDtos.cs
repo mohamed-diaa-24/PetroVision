@@ -50,6 +50,7 @@ public class UserDto
     public string Role { get; set; } = string.Empty;
     public int? DepartmentId { get; set; }
     public string? DepartmentName { get; set; }
+    public bool MustChangePassword { get; set; }
     public List<string> Permissions { get; set; } = new();
 }
 

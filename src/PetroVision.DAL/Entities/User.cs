@@ -12,6 +12,7 @@ public class User
     public UserRole Role { get; set; }
     public UserStatus Status { get; set; } = UserStatus.Pending;
     public string? StatusReason { get; set; }   // e.g. why a sign-up request was rejected
+    public bool MustChangePassword { get; set; } // set for accounts created with a temporary password
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastActiveAt { get; set; }
 

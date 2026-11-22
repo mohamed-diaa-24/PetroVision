@@ -117,6 +117,7 @@ public class AuthService : IAuthService
         Role = user.Role.ToString(),
         DepartmentId = user.DepartmentId,
         DepartmentName = user.Department?.Name,
+        MustChangePassword = user.MustChangePassword,
         Permissions = user.Permissions.Select(p => p.Permission.ToString()).ToList()
     };
 }

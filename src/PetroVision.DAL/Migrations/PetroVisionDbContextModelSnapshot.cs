@@ -416,6 +416,9 @@ namespace PetroVision.DAL.Migrations
                     b.Property<DateTime?>("LastActiveAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
