@@ -21,11 +21,12 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
+        var identifier = request.Identifier.Trim();
 
-        var user = await _db.Users
-            .Include(u => u.Permissions)
-            .FirstOrDefaultAsync(u => u.Email == email);
+        var query = _db.Users.Include(u => u.Permissions).Include(u => u.Department);
+        var user = identifier.Contains('@')
+            ? await query.FirstOrDefaultAsync(u => u.Email == identifier.ToLowerInvariant())
+            : await query.FirstOrDefaultAsync(u => u.EmployeeCode == identifier);
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new InvalidCredentialsException();
@@ -33,7 +34,9 @@ public class AuthService : IAuthService
         switch (user.Status)
         {
             case UserStatus.Pending:
-                throw new ForbiddenException("Your account is awaiting manager approval.");
+                throw new ForbiddenException(user.Role == UserRole.Manager
+                    ? "Your account is awaiting the owner's approval."
+                    : "Your account is awaiting your manager's approval.");
             case UserStatus.Rejected:
                 throw new ForbiddenException("Your sign-up request was rejected.");
             case UserStatus.Expired:
@@ -58,6 +61,12 @@ public class AuthService : IAuthService
         var email = request.Email.Trim().ToLowerInvariant();
         var code = request.EmployeeCode.Trim();
 
+        if (request.Role == UserRole.Owner)
+            throw new BadRequestException("Owner accounts cannot be requested through sign-up.");
+
+        if (!await _db.Departments.AnyAsync(d => d.Id == request.DepartmentId))
+            throw new BadRequestException("Department not found.");
+
         if (await _db.Users.AnyAsync(u => u.Email == email))
             throw new ConflictException("This email is already registered.");
 
@@ -70,13 +79,19 @@ public class AuthService : IAuthService
             EmployeeCode = code,
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = UserRole.Agent,
-            Status = UserStatus.Pending
+            Role = request.Role,
+            Status = UserStatus.Pending,
+            DepartmentId = request.DepartmentId
         });
 
         await _db.SaveChangesAsync();
 
-        return new MessageResponseDto { Message = "Sign-up request submitted. Waiting for manager approval." };
+        return new MessageResponseDto
+        {
+            Message = request.Role == UserRole.Manager
+                ? "Sign-up request submitted. Waiting for the owner's approval."
+                : "Sign-up request submitted. Waiting for your department manager's approval."
+        };
     }
 
     public async Task<UserDto> GetProfileAsync(int userId)
@@ -84,6 +99,7 @@ public class AuthService : IAuthService
         var user = await _db.Users
             .AsNoTracking()
             .Include(u => u.Permissions)
+            .Include(u => u.Department)
             .FirstOrDefaultAsync(u => u.Id == userId)
             ?? throw new NotFoundException("User not found.");
 
@@ -97,6 +113,8 @@ public class AuthService : IAuthService
         EmployeeCode = user.EmployeeCode,
         Email = user.Email,
         Role = user.Role.ToString(),
+        DepartmentId = user.DepartmentId,
+        DepartmentName = user.Department?.Name,
         Permissions = user.Permissions.Select(p => p.Permission.ToString()).ToList()
     };
 }
