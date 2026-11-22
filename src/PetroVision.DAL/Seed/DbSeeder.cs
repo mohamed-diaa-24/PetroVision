@@ -82,6 +82,16 @@ public static class DbSeeder
             CreatedAt = now.AddMinutes(-80)
         });
 
+        // ---------- Notes & Team ----------
+        var helmetRule = new Announcement { Department = unit1, Author = manager, Title = "Helmet rule in Zone B", Message = "Hard hats are mandatory in Zone B at all times, including short visits.", IsPinned = true, CreatedAt = now.AddHours(-14) };
+        helmetRule.Reads.Add(new AnnouncementRead { User = manager, ReadAt = helmetRule.CreatedAt });
+        helmetRule.Reads.Add(new AnnouncementRead { User = ahmed, ReadAt = now.AddHours(-12) });
+        var schedule = new Announcement { Department = unit1, Author = manager, Title = "New shift schedule", Message = "The new rotation starts next Sunday. Check the shared schedule.", CreatedAt = now.AddDays(-1) };
+        schedule.Reads.Add(new AnnouncementRead { User = manager, ReadAt = schedule.CreatedAt });
+        db.Announcements.AddRange(helmetRule, schedule);
+
+        db.HandoverNotes.Add(new HandoverNote { Department = unit1, Author = ahmed, Title = "Evening shift — Ahmed", Details = "Fire incident on Cam 5 closed, area safe. Watch Cam 4, it keeps going offline.", CreatedAt = now.AddMinutes(-30) });
+
         await db.SaveChangesAsync();
 
         // ---------- Audit log (needs the ids above) ----------

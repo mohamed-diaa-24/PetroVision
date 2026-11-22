@@ -10,6 +10,7 @@ public static class Policies
     public const string ReassignIncidents = "ReassignIncidents";
     public const string ViewTeamLogs = "ViewTeamLogs";
     public const string Reviewers = "Reviewers";                 // Manager or Owner
+    public const string PostAnnouncements = "PostAnnouncements";
 }
 
 public static class AuthorizationExtensions
@@ -29,7 +30,9 @@ public static class AuthorizationExtensions
                 ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "ReassignIncidents")))
             .AddPolicy(Policies.ViewTeamLogs, p => p.RequireAssertion(ctx =>
                 ctx.User.IsInRole("Manager") || ctx.User.IsInRole("Owner")
-                || ctx.User.HasClaim("permission", "ViewTeamLogs")));
+                || ctx.User.HasClaim("permission", "ViewTeamLogs")))
+            .AddPolicy(Policies.PostAnnouncements, p => p.RequireAssertion(ctx =>
+                ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "PostAnnouncements")));
 
         return services;
     }

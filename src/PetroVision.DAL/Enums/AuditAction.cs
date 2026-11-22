@@ -32,5 +32,9 @@ public enum AuditAction
 
     ProfileUpdated = 50,
     PasswordChanged = 51,
-    PasswordReset = 52
+    PasswordReset = 52,
+
+    AnnouncementPosted = 60,
+    AnnouncementDeleted = 61,
+    HandoverCreated = 62
 }
