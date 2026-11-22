@@ -19,7 +19,7 @@ public class AuditLogger : IAuditLogger
     }
 
     public void Add(AuditAction action, string entityType, int? entityId, string item,
-        string? details = null, int? departmentId = null)
+        string? details = null, int? departmentId = null, int? actorUserId = null)
     {
         if (details is { Length: > DetailsMaxLength })
             details = details[..(DetailsMaxLength - 1)] + "…";
@@ -31,7 +31,7 @@ public class AuditLogger : IAuditLogger
             EntityId = entityId,
             Item = item.Length > 150 ? item[..150] : item,
             Details = details,
-            UserId = _user.UserId > 0 ? _user.UserId : null,
+            UserId = actorUserId ?? (_user.UserId > 0 ? _user.UserId : null),
             DepartmentId = departmentId ?? _user.DepartmentId,
             CreatedAt = DateTime.UtcNow
         });

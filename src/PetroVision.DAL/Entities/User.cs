@@ -13,6 +13,11 @@ public class User
     public UserStatus Status { get; set; } = UserStatus.Pending;
     public string? StatusReason { get; set; }   // e.g. why a sign-up request was rejected
     public bool MustChangePassword { get; set; } // set for accounts created with a temporary password
+
+    // Forgot password: hashed 6-digit code sent by email
+    public string? PasswordResetCodeHash { get; set; }
+    public DateTime? PasswordResetExpiresAt { get; set; }
+    public int PasswordResetAttempts { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastActiveAt { get; set; }
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PetroVision.API.Middleware;
+using PetroVision.API.Services;
 using PetroVision.BLL;
 using PetroVision.BLL.Interfaces;
 using PetroVision.BLL.Settings;
@@ -40,6 +41,8 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddBusinessLayer(builder.Configuration);
 builder.Services.AddCurrentUser();
 builder.Services.AddScoped<ApiKeyAuthFilter>();
+builder.Services.AddSingleton<IEmailSender, LoggingEmailSender>();
+builder.Services.AddAppRateLimits();
 
 // ---------- JWT ----------
 var jwt = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
@@ -99,6 +102,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
