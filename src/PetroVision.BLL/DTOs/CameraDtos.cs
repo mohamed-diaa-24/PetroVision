@@ -44,7 +44,32 @@ public class CreateCameraDto
     public List<CameraModelDto> Models { get; set; } = new();
 }
 
+public class UpdateCameraDto
+{
+    [Required, StringLength(50)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required, StringLength(100)]
+    public string Location { get; set; } = string.Empty;
+
+    [StringLength(500)]
+    public string StreamUrl { get; set; } = string.Empty;
+}
+
 public class MuteCameraDto
 {
     public bool IsMuted { get; set; }
+}
+
+public class TestConnectionDto
+{
+    [Required, StringLength(500)]
+    public string StreamUrl { get; set; } = string.Empty;
+}
+
+public class ConnectionTestResultDto
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public long? LatencyMs { get; set; }
 }

@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionValidator, SessionValidator>();
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IActivityService, ActivityService>();
+        services.AddSingleton<IStreamProbe, StreamProbe>();
 
         return services;
     }

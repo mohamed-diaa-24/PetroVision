@@ -86,6 +86,38 @@ public class CameraService : ICameraService
         return camera.ToDto();
     }
 
+    public async Task<CameraDto> UpdateAsync(int id, UpdateCameraDto dto)
+    {
+        var camera = await Scoped()
+            .Include(c => c.ModelConfigs)
+            .FirstOrDefaultAsync(c => c.Id == id)
+            ?? throw new NotFoundException("Camera not found.");
+
+        var name = dto.Name.Trim();
+        var location = dto.Location.Trim();
+        var streamUrl = dto.StreamUrl.Trim();
+
+        if (await _db.Cameras.AnyAsync(c => c.Id != id && c.DepartmentId == camera.DepartmentId
+                                            && !c.IsDeleted && c.Name == name))
+            throw new ConflictException("A camera with this name already exists in your department.");
+
+        var changes = new List<string>();
+        if (camera.Name != name) changes.Add($"Name: {camera.Name} → {name}");
+        if (camera.Location != location) changes.Add($"Location: {camera.Location} → {location}");
+        if (camera.StreamUrl != streamUrl) changes.Add("Stream source changed");
+
+        if (changes.Count == 0) return camera.ToDto();
+
+        camera.Name = name;
+        camera.Location = location;
+        camera.StreamUrl = streamUrl;
+
+        _audit.Add(AuditAction.CameraUpdated, nameof(Camera), camera.Id, camera.Name, string.Join("; ", changes));
+        await _db.SaveChangesAsync();
+
+        return camera.ToDto();
+    }
+
     public async Task<CameraDto> UpdateModelsAsync(int id, List<CameraModelDto> models)
     {
         var camera = await Scoped()
