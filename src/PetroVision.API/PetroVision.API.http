@@ -1,6 +1,167 @@
-@PetroVision.API_HostAddress = http://localhost:5187
+@host = http://localhost:5187
+# Paste the token from the login response here
+@token = paste-token-here
 
-GET {{PetroVision.API_HostAddress}}/weatherforecast/
-Accept: application/json
+### Departments (public, for the sign-up form)
+GET {{host}}/api/Departments
 
-###
+### Login with employee ID or email (manager 1001 / Manager@123, agent 4710 / Agent@123, owner 1002 / Owner@123)
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{ "identifier": "1001", "password": "Manager@123" }
+
+### Sign up (Agent -> department manager reviews, Manager -> owner reviews)
+POST {{host}}/api/Auth/signup
+Content-Type: application/json
+
+{ "fullName": "New Agent", "employeeCode": "4999", "email": "new.agent@petrovision.com", "password": "Agent@1234", "role": "Agent", "departmentId": 1 }
+
+### Me
+GET {{host}}/api/Auth/me
+Authorization: Bearer {{token}}
+
+### Change password (returns a new token)
+POST {{host}}/api/Auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "Manager@123", "newPassword": "Manager@1234" }
+
+### Forgot password (dev: the code is written to the API log)
+POST {{host}}/api/Auth/forgot-password
+Content-Type: application/json
+
+{ "identifier": "4710" }
+
+### Reset password
+POST {{host}}/api/Auth/reset-password
+Content-Type: application/json
+
+{ "identifier": "4710", "code": "123456", "newPassword": "Agent@1234" }
+
+### Dashboard
+GET {{host}}/api/Dashboard
+Authorization: Bearer {{token}}
+
+### Cameras
+GET {{host}}/api/Cameras
+Authorization: Bearer {{token}}
+
+### Test a stream before saving
+POST {{host}}/api/Cameras/test-connection
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "streamUrl": "rtsp://192.168.1.20:554/stream1" }
+
+### Edit camera details
+PUT {{host}}/api/Cameras/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Cam 1", "location": "Gate A", "streamUrl": "rtsp://demo/cam1" }
+
+### Camera request (agent)
+POST {{host}}/api/CameraRequests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "type": "Add", "name": "Cam 7", "location": "Yard", "streamUrl": "rtsp://demo/cam7", "models": ["PPE"], "reason": "New blind spot" }
+
+### Camera requests (manager)
+GET {{host}}/api/CameraRequests?status=Pending
+Authorization: Bearer {{token}}
+
+### Approve camera request
+POST {{host}}/api/CameraRequests/1/approve
+Authorization: Bearer {{token}}
+
+### Reject camera request
+POST {{host}}/api/CameraRequests/1/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "reason": "Duplicate of Cam 5" }
+
+### Alerts
+GET {{host}}/api/Alerts?status=New
+Authorization: Bearer {{token}}
+
+### Incidents
+GET {{host}}/api/Incidents
+Authorization: Bearer {{token}}
+
+### Sign-up requests (manager: agents, owner: managers)
+GET {{host}}/api/SignupRequests
+Authorization: Bearer {{token}}
+
+### Approve sign-up with permissions
+POST {{host}}/api/SignupRequests/6/approve
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "permissions": ["ManageCameras", "ViewTeamLogs"] }
+
+### Agents
+GET {{host}}/api/Agents
+Authorization: Bearer {{token}}
+
+### Create agent (returns a temporary password)
+POST {{host}}/api/Agents
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "fullName": "Sara M.", "employeeCode": "4901", "email": "sara@petrovision.com", "permissions": [] }
+
+### Set agent permissions
+PUT {{host}}/api/Agents/3/permissions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "permissions": ["ReassignIncidents", "PostAnnouncements"] }
+
+### End service
+POST {{host}}/api/Agents/3/end-service
+Authorization: Bearer {{token}}
+
+### Team logs
+GET {{host}}/api/Activity/team?take=50
+Authorization: Bearer {{token}}
+
+### My activity
+GET {{host}}/api/Activity/mine
+Authorization: Bearer {{token}}
+
+### Analytics
+GET {{host}}/api/Analytics?days=7
+Authorization: Bearer {{token}}
+
+### Announcements
+GET {{host}}/api/Announcements
+Authorization: Bearer {{token}}
+
+### Post announcement
+POST {{host}}/api/Announcements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "Gas test before hot work", "message": "Every hot-work permit needs a fresh gas test.", "isPinned": true }
+
+### Handover notes
+GET {{host}}/api/Handovers
+Authorization: Bearer {{token}}
+
+### New handover note
+POST {{host}}/api/Handovers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title": "Night shift — Mona", "details": "Cam 4 restarted at 02:10, stable since." }
+
+### AI service: detection (X-Api-Key = Detection:ApiKey)
+POST {{host}}/api/Detections
+X-Api-Key: change-me-at-least-16-chars
+Content-Type: application/json
+
+{ "cameraId": 2, "type": "PPE", "confidence": 0.82, "reason": "Missing safety helmet" }
