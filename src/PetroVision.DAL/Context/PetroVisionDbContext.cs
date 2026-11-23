@@ -16,6 +16,11 @@ public class PetroVisionDbContext : DbContext
     public DbSet<CameraRequest> CameraRequests => Set<CameraRequest>();
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<Incident> Incidents => Set<Incident>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<AnnouncementRead> AnnouncementReads => Set<AnnouncementRead>();
+    public DbSet<HandoverNote> HandoverNotes => Set<HandoverNote>();
+    public DbSet<HandoverRead> HandoverReads => Set<HandoverRead>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

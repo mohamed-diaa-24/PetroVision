@@ -22,7 +22,7 @@ public class ForbiddenException : AppException
 
 public class InvalidCredentialsException : AppException
 {
-    public InvalidCredentialsException(string message = "Invalid email or password.") : base(message) { }
+    public InvalidCredentialsException(string message = "Incorrect employee ID/email or password.") : base(message) { }
 }
 
 public class BadRequestException : AppException

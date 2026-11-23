@@ -11,8 +11,13 @@ namespace PetroVision.API.Controllers;
 public class CamerasController : ControllerBase
 {
     private readonly ICameraService _cameras;
+    private readonly IStreamProbe _probe;
 
-    public CamerasController(ICameraService cameras) => _cameras = cameras;
+    public CamerasController(ICameraService cameras, IStreamProbe probe)
+    {
+        _cameras = cameras;
+        _probe = probe;
+    }
 
     [HttpGet]
     [Authorize(Policy = Policies.Staff)]
@@ -29,6 +34,17 @@ public class CamerasController : ControllerBase
         var created = await _cameras.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = Policies.ManageCameras)]
+    public async Task<ActionResult<CameraDto>> Update(int id, UpdateCameraDto dto)
+        => Ok(await _cameras.UpdateAsync(id, dto));
+
+    // Staff (not only ManageCameras): agents test the URL before sending a camera request.
+    [HttpPost("test-connection")]
+    [Authorize(Policy = Policies.Staff)]
+    public async Task<ActionResult<ConnectionTestResultDto>> TestConnection(TestConnectionDto dto, CancellationToken ct)
+        => Ok(await _probe.TestAsync(dto.StreamUrl, ct));
 
     [HttpPut("{id:int}/models")]
     [Authorize(Policy = Policies.EditModelSettings)]

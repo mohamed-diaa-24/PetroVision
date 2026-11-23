@@ -17,7 +17,7 @@ public class IncidentConfiguration : IEntityTypeConfiguration<Incident>
 
         b.HasOne(x => x.Camera).WithMany()
          .HasForeignKey(x => x.CameraId)
-         .OnDelete(DeleteBehavior.Cascade);
+         .OnDelete(DeleteBehavior.Restrict); // cameras are soft-deleted; history must never cascade away
 
         b.HasOne(x => x.Handler).WithMany()
          .HasForeignKey(x => x.HandlerId)

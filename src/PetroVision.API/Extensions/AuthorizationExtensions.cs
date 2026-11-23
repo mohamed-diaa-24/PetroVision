@@ -8,6 +8,9 @@ public static class Policies
     public const string ManageCameras = "ManageCameras";
     public const string EditModelSettings = "EditModelSettings";
     public const string ReassignIncidents = "ReassignIncidents";
+    public const string ViewTeamLogs = "ViewTeamLogs";
+    public const string Reviewers = "Reviewers";                 // Manager or Owner
+    public const string PostAnnouncements = "PostAnnouncements";
 }
 
 public static class AuthorizationExtensions
@@ -18,12 +21,18 @@ public static class AuthorizationExtensions
             .AddPolicy(Policies.Staff, p => p.RequireRole("Manager", "Agent"))
             .AddPolicy(Policies.ManagerOnly, p => p.RequireRole("Manager"))
             .AddPolicy(Policies.OwnerOnly, p => p.RequireRole("Owner"))
+            .AddPolicy(Policies.Reviewers, p => p.RequireRole("Manager", "Owner"))
             .AddPolicy(Policies.ManageCameras, p => p.RequireAssertion(ctx =>
                 ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "ManageCameras")))
             .AddPolicy(Policies.EditModelSettings, p => p.RequireAssertion(ctx =>
                 ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "EditModelSettings")))
             .AddPolicy(Policies.ReassignIncidents, p => p.RequireAssertion(ctx =>
-                ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "ReassignIncidents")));
+                ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "ReassignIncidents")))
+            .AddPolicy(Policies.ViewTeamLogs, p => p.RequireAssertion(ctx =>
+                ctx.User.IsInRole("Manager") || ctx.User.IsInRole("Owner")
+                || ctx.User.HasClaim("permission", "ViewTeamLogs")))
+            .AddPolicy(Policies.PostAnnouncements, p => p.RequireAssertion(ctx =>
+                ctx.User.IsInRole("Manager") || ctx.User.HasClaim("permission", "PostAnnouncements")));
 
         return services;
     }

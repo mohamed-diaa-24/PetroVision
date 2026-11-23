@@ -12,6 +12,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         b.Property(x => x.EmployeeCode).IsRequired().HasMaxLength(20);
         b.Property(x => x.Email).IsRequired().HasMaxLength(150);
         b.Property(x => x.PasswordHash).IsRequired();
+        b.Property(x => x.SecurityStamp).IsRequired().HasMaxLength(64);
+        b.Property(x => x.StatusReason).HasMaxLength(500);
+        b.Property(x => x.PasswordResetCodeHash).HasMaxLength(100);
 
         b.HasIndex(x => x.Email).IsUnique();
         b.HasIndex(x => x.EmployeeCode).IsUnique();

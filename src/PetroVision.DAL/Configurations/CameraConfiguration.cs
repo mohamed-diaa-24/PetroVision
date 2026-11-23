@@ -12,7 +12,10 @@ public class CameraConfiguration : IEntityTypeConfiguration<Camera>
         b.Property(x => x.Location).IsRequired().HasMaxLength(100);
         b.Property(x => x.StreamUrl).HasMaxLength(500);
 
-        b.HasIndex(x => x.Name).IsUnique();
+        // Names are unique inside a department; removed cameras free their name.
+        b.HasIndex(x => new { x.DepartmentId, x.Name })
+         .IsUnique()
+         .HasFilter("[IsDeleted] = 0");
 
         b.HasOne(x => x.Department).WithMany()
          .HasForeignKey(x => x.DepartmentId)

@@ -13,20 +13,22 @@ public class CameraService : ICameraService
 {
     private readonly PetroVisionDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IAuditLogger _audit;
 
-    public CameraService(PetroVisionDbContext db, ICurrentUser user)
+    public CameraService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit)
     {
         _db = db;
         _user = user;
+        _audit = audit;
     }
 
-    // Every query is limited to the current user's department.
+    // Every query is limited to the current user's department and hides removed cameras.
     private IQueryable<Camera> Scoped()
     {
         var departmentId = _user.DepartmentId
             ?? throw new ForbiddenException("Your account is not assigned to a department yet.");
 
-        return _db.Cameras.Where(c => c.DepartmentId == departmentId);
+        return _db.Cameras.Where(c => c.DepartmentId == departmentId && !c.IsDeleted);
     }
 
     public async Task<List<CameraDto>> GetAllAsync()
@@ -58,8 +60,8 @@ public class CameraService : ICameraService
 
         var name = dto.Name.Trim();
 
-        if (await _db.Cameras.AnyAsync(c => c.Name == name))
-            throw new ConflictException("A camera with this name already exists.");
+        if (await _db.Cameras.AnyAsync(c => c.DepartmentId == departmentId && !c.IsDeleted && c.Name == name))
+            throw new ConflictException("A camera with this name already exists in your department.");
 
         var camera = new Camera
         {
@@ -76,6 +78,41 @@ public class CameraService : ICameraService
         };
 
         _db.Cameras.Add(camera);
+        await _db.SaveChangesAsync();
+
+        _audit.Add(AuditAction.CameraCreated, nameof(Camera), camera.Id, camera.Name, camera.Location);
+        await _db.SaveChangesAsync();
+
+        return camera.ToDto();
+    }
+
+    public async Task<CameraDto> UpdateAsync(int id, UpdateCameraDto dto)
+    {
+        var camera = await Scoped()
+            .Include(c => c.ModelConfigs)
+            .FirstOrDefaultAsync(c => c.Id == id)
+            ?? throw new NotFoundException("Camera not found.");
+
+        var name = dto.Name.Trim();
+        var location = dto.Location.Trim();
+        var streamUrl = dto.StreamUrl.Trim();
+
+        if (await _db.Cameras.AnyAsync(c => c.Id != id && c.DepartmentId == camera.DepartmentId
+                                            && !c.IsDeleted && c.Name == name))
+            throw new ConflictException("A camera with this name already exists in your department.");
+
+        var changes = new List<string>();
+        if (camera.Name != name) changes.Add($"Name: {camera.Name} → {name}");
+        if (camera.Location != location) changes.Add($"Location: {camera.Location} → {location}");
+        if (camera.StreamUrl != streamUrl) changes.Add("Stream source changed");
+
+        if (changes.Count == 0) return camera.ToDto();
+
+        camera.Name = name;
+        camera.Location = location;
+        camera.StreamUrl = streamUrl;
+
+        _audit.Add(AuditAction.CameraUpdated, nameof(Camera), camera.Id, camera.Name, string.Join("; ", changes));
         await _db.SaveChangesAsync();
 
         return camera.ToDto();
@@ -112,6 +149,9 @@ public class CameraService : ICameraService
             }
         }
 
+        _audit.Add(AuditAction.CameraModelsUpdated, nameof(Camera), camera.Id, camera.Name,
+            incoming.Count == 0 ? "No models" : string.Join(", ", incoming.Select(m =>
+                $"{m.Type} {(m.IsEnabled ? "on" : "off")} ≥{m.ConfidenceThreshold:0.00}")));
         await _db.SaveChangesAsync();
         return camera.ToDto();
     }
@@ -124,6 +164,7 @@ public class CameraService : ICameraService
             ?? throw new NotFoundException("Camera not found.");
 
         camera.IsMuted = isMuted;
+        _audit.Add(isMuted ? AuditAction.CameraMuted : AuditAction.CameraUnmuted, nameof(Camera), camera.Id, camera.Name);
         await _db.SaveChangesAsync();
 
         return camera.ToDto();
@@ -134,7 +175,11 @@ public class CameraService : ICameraService
         var camera = await Scoped().FirstOrDefaultAsync(c => c.Id == id)
             ?? throw new NotFoundException("Camera not found.");
 
-        _db.Cameras.Remove(camera);
+        // Soft delete: alerts and incidents keep pointing at this camera for the audit trail.
+        camera.IsDeleted = true;
+        camera.DeletedAt = DateTime.UtcNow;
+        camera.Health = CameraHealth.Offline;
+        _audit.Add(AuditAction.CameraDeleted, nameof(Camera), camera.Id, camera.Name);
         await _db.SaveChangesAsync();
     }
 

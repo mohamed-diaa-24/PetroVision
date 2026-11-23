@@ -1,11 +1,13 @@
 using System.ComponentModel.DataAnnotations;
+using PetroVision.DAL.Enums;
 
 namespace PetroVision.BLL.DTOs;
 
 public class LoginRequestDto
 {
-    [Required, EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    // Employee ID (e.g. "4710") or email address.
+    [Required, StringLength(150)]
+    public string Identifier { get; set; } = string.Empty;
 
     [Required]
     public string Password { get; set; } = string.Empty;
@@ -24,6 +26,56 @@ public class SignupRequestDto
 
     [Required, MinLength(8)]
     public string Password { get; set; } = string.Empty;
+
+    // Agent requests are reviewed by the department manager, Manager requests by the owner.
+    [EnumDataType(typeof(UserRole))]
+    public UserRole Role { get; set; } = UserRole.Agent;
+
+    [Range(1, int.MaxValue)]
+    public int DepartmentId { get; set; }
+}
+
+public class UpdateProfileDto
+{
+    [Required, StringLength(100, MinimumLength = 3)]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required, EmailAddress, StringLength(150)]
+    public string Email { get; set; } = string.Empty;
+}
+
+public class ChangePasswordDto
+{
+    [Required]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required, MinLength(8)]
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class ForgotPasswordDto
+{
+    // Employee ID or email
+    [Required, StringLength(150)]
+    public string Identifier { get; set; } = string.Empty;
+}
+
+public class ResetPasswordDto
+{
+    [Required, StringLength(150)]
+    public string Identifier { get; set; } = string.Empty;
+
+    [Required, RegularExpression(@"^\d{6}$", ErrorMessage = "The code is 6 digits.")]
+    public string Code { get; set; } = string.Empty;
+
+    [Required, MinLength(8)]
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class DepartmentDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 public class UserDto
@@ -33,6 +85,9 @@ public class UserDto
     public string EmployeeCode { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+    public int? DepartmentId { get; set; }
+    public string? DepartmentName { get; set; }
+    public bool MustChangePassword { get; set; }
     public List<string> Permissions { get; set; } = new();
 }
 

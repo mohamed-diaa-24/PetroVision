@@ -24,6 +24,16 @@ public static class DependencyInjection
         services.AddScoped<IAlertService, AlertService>();
         services.AddScoped<IIncidentService, IncidentService>();
         services.AddScoped<IDetectionService, DetectionService>();
+        services.AddScoped<IDepartmentService, DepartmentService>();
+        services.AddScoped<ISessionValidator, SessionValidator>();
+        services.AddScoped<IAuditLogger, AuditLogger>();
+        services.AddScoped<IActivityService, ActivityService>();
+        services.AddSingleton<IStreamProbe, StreamProbe>();
+        services.AddScoped<ICameraRequestService, CameraRequestService>();
+        services.AddScoped<ISignupReviewService, SignupReviewService>();
+        services.AddScoped<IAgentService, AgentService>();
+        services.AddScoped<IAnalyticsService, AnalyticsService>();
+        services.AddScoped<INotesService, NotesService>();
 
         return services;
     }
