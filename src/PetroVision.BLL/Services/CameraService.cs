@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PetroVision.BLL.DTOs;
 using PetroVision.BLL.Exceptions;
 using PetroVision.BLL.Interfaces;
@@ -14,12 +15,17 @@ public class CameraService : ICameraService
     private readonly PetroVisionDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IAuditLogger _audit;
+    private readonly IEventNotifier _events;
+    private readonly ILogger<CameraService> _logger;
 
-    public CameraService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit)
+    public CameraService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit,
+        IEventNotifier events, ILogger<CameraService> logger)
     {
         _db = db;
         _user = user;
         _audit = audit;
+        _events = events;
+        _logger = logger;
     }
 
     // Every query is limited to the current user's department and hides removed cameras.
@@ -83,7 +89,7 @@ public class CameraService : ICameraService
         _audit.Add(AuditAction.CameraCreated, nameof(Camera), camera.Id, camera.Name, camera.Location);
         await _db.SaveChangesAsync();
 
-        return camera.ToDto();
+        return await ChangedAsync(camera, CameraChangeActions.Created);
     }
 
     public async Task<CameraDto> UpdateAsync(int id, UpdateCameraDto dto)
@@ -115,7 +121,7 @@ public class CameraService : ICameraService
         _audit.Add(AuditAction.CameraUpdated, nameof(Camera), camera.Id, camera.Name, string.Join("; ", changes));
         await _db.SaveChangesAsync();
 
-        return camera.ToDto();
+        return await ChangedAsync(camera, CameraChangeActions.Updated);
     }
 
     public async Task<CameraDto> UpdateModelsAsync(int id, List<CameraModelDto> models)
@@ -153,7 +159,8 @@ public class CameraService : ICameraService
             incoming.Count == 0 ? "No models" : string.Join(", ", incoming.Select(m =>
                 $"{m.Type} {(m.IsEnabled ? "on" : "off")} ≥{m.ConfidenceThreshold:0.00}")));
         await _db.SaveChangesAsync();
-        return camera.ToDto();
+
+        return await ChangedAsync(camera, CameraChangeActions.Updated);
     }
 
     public async Task<CameraDto> SetMuteAsync(int id, bool isMuted)
@@ -167,7 +174,7 @@ public class CameraService : ICameraService
         _audit.Add(isMuted ? AuditAction.CameraMuted : AuditAction.CameraUnmuted, nameof(Camera), camera.Id, camera.Name);
         await _db.SaveChangesAsync();
 
-        return camera.ToDto();
+        return await ChangedAsync(camera, CameraChangeActions.Updated);
     }
 
     public async Task DeleteAsync(int id)
@@ -181,6 +188,18 @@ public class CameraService : ICameraService
         camera.Health = CameraHealth.Offline;
         _audit.Add(AuditAction.CameraDeleted, nameof(Camera), camera.Id, camera.Name);
         await _db.SaveChangesAsync();
+
+        await _events.TryNotifyAsync(_logger, "CamerasChanged",
+            n => n.CamerasChangedAsync(camera.DepartmentId, CameraChangeActions.Deleted, camera.Id, null));
+    }
+
+    // Maps the saved camera once, pushes CamerasChanged with that DTO and returns it.
+    private async Task<CameraDto> ChangedAsync(Camera camera, string action)
+    {
+        var dto = camera.ToDto();
+        await _events.TryNotifyAsync(_logger, "CamerasChanged",
+            n => n.CamerasChangedAsync(camera.DepartmentId, action, camera.Id, dto));
+        return dto;
     }
 
     private static CameraModelConfig ToConfig(CameraModelDto m) => new()

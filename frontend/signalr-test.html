@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PetroVision · SignalR test</title>
+  <style>
+    :root { --navy: #0f2340; --orange: #f28c28; --line: #d6dbe3; --muted: #5b6573; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1b2230; background: #f5f7fa; }
+    header { background: var(--navy); color: #fff; padding: 14px 24px; }
+    header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    main { max-width: 1000px; margin: 0 auto; padding: 20px 24px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); flex: 1 1 200px; }
+    input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; color: inherit; }
+    button { padding: 8px 16px; border: 0; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    #connectBtn { background: var(--orange); color: #fff; }
+    #disconnectBtn, #clearBtn { background: #e8ebf0; color: var(--navy); }
+    .status { display: flex; gap: 10px; align-items: center; margin-top: 12px; font-size: 13px; }
+    .badge { padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; background: #e8ebf0; color: var(--muted); }
+    .badge.Connected { background: #dcf3e4; color: #17663a; }
+    .badge.Connecting, .badge.Reconnecting { background: #fff1d6; color: #8a5a00; }
+    .badge.Disconnected { background: #fde2e2; color: #9b1c1c; }
+    #who { color: var(--muted); }
+    #error { color: #9b1c1c; margin-top: 8px; min-height: 1.2em; font-size: 13px; }
+    #log { list-style: none; margin: 0; padding: 0; }
+    #log li { border-top: 1px solid var(--line); padding: 10px 0; }
+    #log li:first-child { border-top: 0; }
+    .meta { display: flex; gap: 10px; align-items: baseline; }
+    .time { color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    .name { font-weight: 700; color: var(--navy); }
+    .name.system { color: var(--muted); font-weight: 600; }
+    pre { margin: 6px 0 0; padding: 10px; background: #0f2340; color: #e8eef7; border-radius: 6px; overflow: auto; font-size: 12px; }
+    .empty { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header><h1>PetroVision 360 · real-time events test</h1></header>
+  <main>
+    <section class="card">
+      <div class="row">
+        <label>API base URL <input id="baseUrl" value="http://localhost:5187" autocomplete="off"></label>
+        <label>Email (or employee ID) <input id="email" value="manager@petrovision.com" autocomplete="username"></label>
+        <label>Password <input id="password" type="password" autocomplete="current-password"></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="connectBtn" type="button">Connect</button>
+        <button id="disconnectBtn" type="button" disabled>Disconnect</button>
+        <button id="clearBtn" type="button">Clear log</button>
+      </div>
+      <div class="status">State: <span id="state" class="badge Disconnected">Disconnected</span> <span id="who"></span></div>
+      <div id="error" role="alert"></div>
+    </section>
+
+    <section class="card">
+      <ul id="log"><li class="empty">No events yet. Connect, then trigger something (Swagger, the AI endpoint, ...).</li></ul>
+    </section>
+  </main>
+
+  <!-- Pinned SignalR client (do not use an unpinned URL). Integrity = sha384 of the npm file. -->
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"
+          integrity="sha384-mU1xC5yC2LldSW74Rj1Ax8wPiLw/28V5eh51uKJMlBbRVsOtUYd4xyzNsgIAJARB"
+          crossorigin="anonymous"></script>
+  <script src="js/realtime.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var $ = function (id) { return document.getElementById(id); };
+      var connection = null;
+
+      function setState(state) {
+        var badge = $("state");
+        badge.textContent = state;
+        badge.className = "badge " + state;
+        var busy = state === "Connected" || state === "Connecting" || state === "Reconnecting";
+        $("connectBtn").disabled = busy;
+        $("disconnectBtn").disabled = !busy;
+      }
+
+      function showError(message) { $("error").textContent = message || ""; }
+
+      function log(name, payload, isSystem) {
+        var list = $("log");
+        var empty = list.querySelector(".empty");
+        if (empty) empty.remove();
+
+        var item = document.createElement("li");
+        var meta = document.createElement("div");
+        meta.className = "meta";
+
+        var time = document.createElement("span");
+        time.className = "time";
+        time.textContent = new Date().toISOString();
+
+        var label = document.createElement("span");
+        label.className = "name" + (isSystem ? " system" : "");
+        label.textContent = name;
+
+        meta.appendChild(time);
+        meta.appendChild(label);
+        item.appendChild(meta);
+
+        if (payload !== undefined) {
+          var pre = document.createElement("pre");
+          pre.textContent = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
+          item.appendChild(pre);
+        }
+        list.insertBefore(item, list.firstChild);
+      }
+
+      async function login(baseUrl, identifier, password) {
+        var response = await fetch(baseUrl + "/api/Auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier: identifier, password: password })
+        });
+        var body = await response.json().catch(function () { return null; });
+        if (!response.ok) {
+          var detail = body && (body.detail || body.title);
+          var loginError = new Error("Login failed (" + response.status + ")" + (detail ? ": " + detail : ""));
+          loginError.isLogin = true;
+          throw loginError;
+        }
+        return body;
+      }
+
+      async function connect() {
+        showError("");
+        var baseUrl = $("baseUrl").value.trim().replace(/\/+$/, "");
+        var email = $("email").value.trim();
+        var password = $("password").value;
+        if (!baseUrl || !email || !password) {
+          showError("Enter the API base URL, email and password.");
+          return;
+        }
+
+        setState("Connecting");
+        try {
+          var session = await login(baseUrl, email, password);
+          $("who").textContent = "as " + session.user.fullName + " (" + session.user.role +
+            (session.user.departmentName ? ", " + session.user.departmentName : "") + ")";
+
+          var handlers = {};
+          PetroVisionRealtime.EVENT_NAMES.forEach(function (name) {
+            handlers[name] = function (payload) { log(name, payload); };
+          });
+
+          connection = connectRealtime({ baseUrl: baseUrl, token: session.token, handlers: handlers });
+          connection.onreconnecting(function (err) { setState("Reconnecting"); log("reconnecting", err ? String(err) : undefined, true); });
+          connection.onreconnected(function () { setState("Connected"); log("reconnected", undefined, true); });
+          connection.onclose(function (err) {
+            setState("Disconnected");
+            log("disconnected", err ? String(err) : undefined, true);
+          });
+
+          await connection.start();
+          setState("Connected");
+          log("connected", { connectionId: connection.connectionId }, true);
+        } catch (err) {
+          setState("Disconnected");
+          var message = String(err && err.message || err);
+          if (!err.isLogin && /401|Unauthorized/i.test(message)) message = "Hub connection rejected (401 Unauthorized). " + message;
+          showError(message);
+          log("error", message, true);
+          connection = null;
+        }
+      }
+
+      async function disconnect() {
+        if (connection) {
+          var current = connection;
+          connection = null;
+          await current.stop();
+        }
+        setState("Disconnected");
+      }
+
+      $("connectBtn").addEventListener("click", connect);
+      $("disconnectBtn").addEventListener("click", disconnect);
+      $("clearBtn").addEventListener("click", function () {
+        $("log").innerHTML = '<li class="empty">Log cleared.</li>';
+      });
+      $("password").addEventListener("keydown", function (e) { if (e.key === "Enter") connect(); });
+    })();
+  </script>
+</body>
+</html>

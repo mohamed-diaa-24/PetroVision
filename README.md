@@ -38,6 +38,7 @@ agent `4710` / `Agent@123`, owner `1002` / `Owner@123` (login accepts employee I
 | Announcements | `GET`, `POST`, `POST {id}/seen`, `PATCH {id}/pin`, `DELETE {id}` | Staff / PostAnnouncements |
 | Handovers | `GET`, `POST`, `POST {id}/read` | Staff |
 | Detections | `POST`, `POST heartbeat` | AI service (`X-Api-Key`) |
+| Real-time | SignalR hub `/hubs/events` (see [PetroVision_Backend_Progress.md](PetroVision_Backend_Progress.md)) | signed in |
 
 Notes:
 - Every token carries a security stamp; changing permissions, status or password signs the user out.

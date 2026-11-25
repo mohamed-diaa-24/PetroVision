@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PetroVision.BLL.DTOs;
 using PetroVision.BLL.Exceptions;
 using PetroVision.BLL.Interfaces;
@@ -14,12 +15,17 @@ public class IncidentService : IIncidentService
     private readonly PetroVisionDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IAuditLogger _audit;
+    private readonly IEventNotifier _events;
+    private readonly ILogger<IncidentService> _logger;
 
-    public IncidentService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit)
+    public IncidentService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit,
+        IEventNotifier events, ILogger<IncidentService> logger)
     {
         _db = db;
         _user = user;
         _audit = audit;
+        _events = events;
+        _logger = logger;
     }
 
     private int DepartmentId => _user.DepartmentId
@@ -95,7 +101,9 @@ public class IncidentService : IIncidentService
             $"{incident.Type} · {camera.Name}");
         await _db.SaveChangesAsync();
 
-        return await GetByIdAsync(incident.Id);
+        var result = await GetByIdAsync(incident.Id);
+        await _events.TryNotifyAsync(_logger, "IncidentCreated", n => n.IncidentCreatedAsync(departmentId, result));
+        return result;
     }
 
     public async Task<IncidentDto> AcknowledgeAsync(int id)
@@ -110,7 +118,7 @@ public class IncidentService : IIncidentService
 
         _audit.Add(AuditAction.IncidentAcknowledged, nameof(Incident), incident.Id, $"Incident #{incident.Id}");
         await _db.SaveChangesAsync();
-        return await GetByIdAsync(id);
+        return await UpdatedAsync(id);
     }
 
     public async Task<IncidentDto> CloseAsync(int id, string note)
@@ -130,7 +138,7 @@ public class IncidentService : IIncidentService
 
         _audit.Add(AuditAction.IncidentClosed, nameof(Incident), incident.Id, $"Incident #{incident.Id}", incident.Note);
         await _db.SaveChangesAsync();
-        return await GetByIdAsync(id);
+        return await UpdatedAsync(id);
     }
 
     public async Task<IncidentDto> ReassignAsync(int id, int assigneeId)
@@ -153,6 +161,14 @@ public class IncidentService : IIncidentService
         _audit.Add(AuditAction.IncidentReassigned, nameof(Incident), incident.Id, $"Incident #{incident.Id}",
             $"Assigned to {assignee.FullName}");
         await _db.SaveChangesAsync();
-        return await GetByIdAsync(id);
+        return await UpdatedAsync(id);
+    }
+
+    // Reloads the incident after a saved change and pushes IncidentUpdated (department + owners).
+    private async Task<IncidentDto> UpdatedAsync(int id)
+    {
+        var result = await GetByIdAsync(id);
+        await _events.TryNotifyAsync(_logger, "IncidentUpdated", n => n.IncidentUpdatedAsync(DepartmentId, result));
+        return result;
     }
 }

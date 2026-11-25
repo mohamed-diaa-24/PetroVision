@@ -1,6 +1,8 @@
 using PetroVision.API.Filters;
+using PetroVision.API.Hubs;
 using PetroVision.API.Extensions;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -42,6 +44,13 @@ builder.Services.AddBusinessLayer(builder.Configuration);
 builder.Services.AddCurrentUser();
 builder.Services.AddScoped<ApiKeyAuthFilter>();
 builder.Services.AddSingleton<IEmailSender, LoggingEmailSender>();
+
+// ---------- Real-time (SignalR) ----------
+// The hub protocol has its own JSON options: without the converter, enums would arrive as numbers
+// while REST sends them as strings.
+builder.Services.AddSignalR()
+    .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddSingleton<IEventNotifier, SignalREventNotifier>();
 builder.Services.AddAppRateLimits();
 
 // ---------- JWT ----------
@@ -72,6 +81,17 @@ builder.Services
         // token's security stamp must match (it changes on permission/status/password changes).
         options.Events = new JwtBearerEvents
         {
+            // Browsers cannot send an Authorization header on WebSockets / Server-Sent Events,
+            // so the SignalR client passes the token as ?access_token=... (only accepted for /hubs).
+            OnMessageReceived = ctx =>
+            {
+                var accessToken = ctx.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && ctx.Request.Path.StartsWithSegments("/hubs"))
+                    ctx.Token = accessToken;
+
+                return Task.CompletedTask;
+            },
+
             OnTokenValidated = async ctx =>
             {
                 var validator = ctx.HttpContext.RequestServices.GetRequiredService<ISessionValidator>();
@@ -106,5 +126,6 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<EventsHub>("/hubs/events");
 
 app.Run();
