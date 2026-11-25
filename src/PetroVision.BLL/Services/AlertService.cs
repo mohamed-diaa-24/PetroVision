@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PetroVision.BLL.DTOs;
 using PetroVision.BLL.Exceptions;
 using PetroVision.BLL.Interfaces;
@@ -14,19 +15,25 @@ public class AlertService : IAlertService
     private readonly PetroVisionDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IAuditLogger _audit;
+    private readonly IEventNotifier _events;
+    private readonly ILogger<AlertService> _logger;
 
-    public AlertService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit)
+    public AlertService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit,
+        IEventNotifier events, ILogger<AlertService> logger)
     {
         _db = db;
         _user = user;
         _audit = audit;
+        _events = events;
+        _logger = logger;
     }
+
+    private int DepartmentId => _user.DepartmentId
+        ?? throw new ForbiddenException("Your account is not assigned to a department yet.");
 
     private IQueryable<Alert> Scoped()
     {
-        var departmentId = _user.DepartmentId
-            ?? throw new ForbiddenException("Your account is not assigned to a department yet.");
-
+        var departmentId = DepartmentId;
         return _db.Alerts.Where(a => a.Camera.DepartmentId == departmentId);
     }
 
@@ -67,7 +74,10 @@ public class AlertService : IAlertService
 
         _audit.Add(AuditAction.AlertAcknowledged, nameof(Alert), alert.Id, $"Alert #{alert.Id}");
         await _db.SaveChangesAsync();
-        return await GetByIdAsync(id);
+
+        var result = await GetByIdAsync(id);
+        await NotifyAlertUpdatedAsync(result);
+        return result;
     }
 
     public async Task<AlertDto> DismissAsync(int id, DismissReason reason)
@@ -84,7 +94,10 @@ public class AlertService : IAlertService
 
         _audit.Add(AuditAction.AlertDismissed, nameof(Alert), alert.Id, $"Alert #{alert.Id}", $"Reason: {reason}");
         await _db.SaveChangesAsync();
-        return await GetByIdAsync(id);
+
+        var result = await GetByIdAsync(id);
+        await NotifyAlertUpdatedAsync(result);
+        return result;
     }
 
     public async Task<IncidentDto> EscalateAsync(int id)
@@ -113,7 +126,8 @@ public class AlertService : IAlertService
             SourceAlertId = alert.Id
         };
 
-        if (alert.Status == AlertStatus.New)
+        var alertStatusChanged = alert.Status == AlertStatus.New;
+        if (alertStatusChanged)
         {
             alert.Status = AlertStatus.Acknowledged;
             alert.HandledById = _user.UserId;
@@ -126,7 +140,15 @@ public class AlertService : IAlertService
         _audit.Add(AuditAction.AlertEscalated, nameof(Alert), alert.Id, $"Alert #{alert.Id}", $"Escalated to incident #{incident.Id}");
         await _db.SaveChangesAsync();
 
-        var created = await _db.Incidents.AsNoTracking().WithDetails().FirstAsync(i => i.Id == incident.Id);
-        return created.ToDto();
+        var created = (await _db.Incidents.AsNoTracking().WithDetails().FirstAsync(i => i.Id == incident.Id)).ToDto();
+
+        await _events.TryNotifyAsync(_logger, "IncidentCreated", n => n.IncidentCreatedAsync(DepartmentId, created));
+        if (alertStatusChanged)
+            await _events.TryNotifyAsync(_logger, "AlertUpdated", async n => await n.AlertUpdatedAsync(DepartmentId, await GetByIdAsync(id)));
+
+        return created;
     }
+
+    private Task NotifyAlertUpdatedAsync(AlertDto alert)
+        => _events.TryNotifyAsync(_logger, "AlertUpdated", n => n.AlertUpdatedAsync(DepartmentId, alert));
 }

@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PetroVision.BLL.DTOs;
 using PetroVision.BLL.Exceptions;
 using PetroVision.BLL.Interfaces;
+using PetroVision.BLL.Mapping;
 using PetroVision.DAL.Context;
 using PetroVision.DAL.Entities;
 using PetroVision.DAL.Enums;
@@ -13,12 +15,17 @@ public class CameraRequestService : ICameraRequestService
     private readonly PetroVisionDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IAuditLogger _audit;
+    private readonly IEventNotifier _events;
+    private readonly ILogger<CameraRequestService> _logger;
 
-    public CameraRequestService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit)
+    public CameraRequestService(PetroVisionDbContext db, ICurrentUser user, IAuditLogger audit,
+        IEventNotifier events, ILogger<CameraRequestService> logger)
     {
         _db = db;
         _user = user;
         _audit = audit;
+        _events = events;
+        _logger = logger;
     }
 
     private int DepartmentId => _user.DepartmentId
@@ -135,6 +142,8 @@ public class CameraRequestService : ICameraRequestService
     {
         var request = await LoadPendingAsync(id);
         string? detail = null;
+        Camera changedCamera = null!;
+        string cameraAction;
 
         switch (request.Type)
         {
@@ -157,6 +166,7 @@ public class CameraRequestService : ICameraRequestService
 
                 request.CameraId = camera.Id;
                 _audit.Add(AuditAction.CameraCreated, nameof(Camera), camera.Id, camera.Name, $"From request #{request.Id}");
+                (changedCamera, cameraAction) = (camera, CameraChangeActions.Created);
                 break;
             }
             case CameraRequestType.Edit:
@@ -179,6 +189,7 @@ public class CameraRequestService : ICameraRequestService
                 }
 
                 _audit.Add(AuditAction.CameraUpdated, nameof(Camera), camera.Id, camera.Name, $"From request #{request.Id}");
+                (changedCamera, cameraAction) = (camera, CameraChangeActions.Updated);
                 break;
             }
             case CameraRequestType.Remove:
@@ -190,14 +201,21 @@ public class CameraRequestService : ICameraRequestService
                 detail = camera.Name;
 
                 _audit.Add(AuditAction.CameraDeleted, nameof(Camera), camera.Id, camera.Name, $"From request #{request.Id}");
+                (changedCamera, cameraAction) = (camera, CameraChangeActions.Deleted);
                 break;
             }
+            default:
+                throw new BadRequestException("Unknown request type.");
         }
 
         MarkReviewed(request, RequestStatus.Approved, note: null);
         _audit.Add(AuditAction.CameraRequestApproved, nameof(CameraRequest), request.Id,
             $"{request.Type} camera · {detail ?? request.Name}", $"Requested by {request.RequestedBy.FullName}");
         await _db.SaveChangesAsync();
+
+        await _events.TryNotifyAsync(_logger, "CamerasChanged", n => n.CamerasChangedAsync(
+            changedCamera.DepartmentId, cameraAction, changedCamera.Id,
+            cameraAction == CameraChangeActions.Deleted ? null : changedCamera.ToDto()));
 
         return await GetByIdAsync(id);
     }
